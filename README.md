@@ -1,7 +1,7 @@
 # PlayerAnimationLibraryMoreRotation
 
-一个 Fabric 运行时兼容库，用 Mixin 扩展
-Player Animation Library Fabric 和 bendable-cuboids 的玩家动画能力，并提供通用的
+一个 Fabric / NeoForge 多加载器运行时兼容库，用 Mixin 扩展
+Player Animation Library 和 bendable-cuboids 的玩家动画能力，并提供通用的
 PAL 播放/停止/服务端同步 API。
 
 ## 支持版本
@@ -9,7 +9,8 @@ PAL 播放/停止/服务端同步 API。
 - Minecraft: `26.1.2`
 - Fabric Loader: `0.19.3`
 - Fabric API: `0.153.0+26.1.2`
-- Player Animation Library Fabric: `1.2.4+mc.26.1`
+- NeoForge: `26.1.2.76`
+- Player Animation Library Fabric / Neo: `1.2.4+mc.26.1`
 - bendable-cuboids: `2.0.2`
 - Java: `25`
 
@@ -158,10 +159,12 @@ stop: Boolean
 
 ## 初始化入口
 
-- Common entrypoint:
-  `com.kltyton.playeranimationlibrarymorerotation.Playeranimationlibrarymorerotation`
-- Client entrypoint:
-  `com.kltyton.playeranimationlibrarymorerotation.client.PlayeranimationlibrarymorerotationClient`
+- Fabric main entrypoint:
+  `com.kltyton.playeranimationlibrarymorerotation.fabric.PlayeranimationlibrarymorerotationFabric`
+- Fabric client entrypoint:
+  `com.kltyton.playeranimationlibrarymorerotation.fabric.client.PlayeranimationlibrarymorerotationFabricClient`
+- NeoForge mod entrypoint:
+  `com.kltyton.playeranimationlibrarymorerotation.neoforge.PlayeranimationlibrarymorerotationNeoForge`
 
 ## 测试命令
 
@@ -184,9 +187,14 @@ stop: Boolean
 .\gradlew.bat build
 ```
 
-客户端启动验证：
+Fabric 客户端启动验证：
 
 ```powershell
-.\gradlew.bat runClient
+.\gradlew.bat :fabric:runClient
 ```
 
+NeoForge 客户端启动验证：
+
+```powershell
+.\gradlew.bat :neoforge:runClient
+```

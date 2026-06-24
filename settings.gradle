@@ -25,10 +25,6 @@ pluginManagement {
             }
         }
     }
-    plugins {
-        id 'net.fabricmc.fabric-loom' version '1.17.12'
-        id 'net.neoforged.moddev' version '2.0.141'
-    }
 }
 
 plugins {

@@ -1,7 +1,7 @@
 # PlayerAnimationLibraryMoreRotation
 
-A Fabric runtime compatibility library that extends Player Animation Library
-Fabric and bendable-cuboids player animation behavior with Mixin patches, plus a
+A Fabric / NeoForge multiloaded runtime compatibility library that extends
+Player Animation Library and bendable-cuboids player animation behavior with Mixin patches, plus a
 small reusable PAL playback/sync API for downstream mods.
 
 ## Supported Versions
@@ -9,7 +9,8 @@ small reusable PAL playback/sync API for downstream mods.
 - Minecraft: `26.1.2`
 - Fabric Loader: `0.19.3`
 - Fabric API: `0.153.0+26.1.2`
-- Player Animation Library Fabric: `1.2.4+mc.26.1`
+- NeoForge: `26.1.2.76`
+- Player Animation Library Fabric / Neo: `1.2.4+mc.26.1`
 - bendable-cuboids: `2.0.2`
 - Java: `25`
 
@@ -164,10 +165,12 @@ Downstream mods do not need to register this payload or receiver again.
 
 ## Entrypoints
 
-- Common entrypoint:
-  `com.kltyton.playeranimationlibrarymorerotation.Playeranimationlibrarymorerotation`
-- Client entrypoint:
-  `com.kltyton.playeranimationlibrarymorerotation.client.PlayeranimationlibrarymorerotationClient`
+- Fabric main entrypoint:
+  `com.kltyton.playeranimationlibrarymorerotation.fabric.PlayeranimationlibrarymorerotationFabric`
+- Fabric client entrypoint:
+  `com.kltyton.playeranimationlibrarymorerotation.fabric.client.PlayeranimationlibrarymorerotationFabricClient`
+- NeoForge mod entrypoint:
+  `com.kltyton.playeranimationlibrarymorerotation.neoforge.PlayeranimationlibrarymorerotationNeoForge`
 
 ## Test Commands
 
@@ -194,9 +197,14 @@ command:
 .\gradlew.bat build
 ```
 
-Client launch validation:
+Fabric client launch validation:
 
 ```powershell
-.\gradlew.bat runClient
+.\gradlew.bat :fabric:runClient
 ```
 
+NeoForge client launch validation:
+
+```powershell
+.\gradlew.bat :neoforge:runClient
+```
