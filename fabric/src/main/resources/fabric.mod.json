@@ -26,7 +26,6 @@
     "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": "*",
     "minecraft": "${minecraft_version}",
-    "forgeconfigapiport": ">=${forge_config_api_port_version}",
     "player_animation_library": ">=1.2.4+mc.26.1",
     "bendable_cuboids": ">=2.0.2"
   }

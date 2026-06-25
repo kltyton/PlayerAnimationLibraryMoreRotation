@@ -1,7 +1,6 @@
 package com.kltyton.playeranimationlibrarymorerotation.client.compat;
 
 import com.kltyton.playeranimationlibrarymorerotation.compat.PalMoreBendHolder;
-import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.zigythebird.bendable_cuboids.api.BendableCube;
@@ -24,32 +23,100 @@ public final class PalMoreBendableCuboids {
     }
 
     public static void applyVectorBend(ModelPart part, PalMoreBendHolder bend) {
-        float bendX = bend.palMore$getBendX();
-        float bendY = bend.palMore$getBendY();
-        float bendZ = bend.palMore$getBendZ();
-        boolean hasTransform = hasBendTransform(bend);
+        BendVectorState state = BendVectorState.from(bend);
+        boolean hasExtendedBend = hasExtendedBend(state);
         BendVectorState previous = LAST_VECTOR_BEND.get(part);
 
-        if (isZero(bendY) && isZero(bendZ) && !hasTransform && previous == null) {
+        if (!hasExtendedBend && previous == null) {
             return;
         }
 
-        PalMoreDebug.verboseLimited(PalMoreDebug.RENDER,
-                "skip part={} reason=not BendableModelPart bend=({}, {}, {}) transformActive={}",
-                System.identityHashCode(part),
-                bendX,
-                bendY,
-                bendZ,
-                hasTransform);
-        LAST_VECTOR_BEND.remove(part);
+        if (!((Object) part instanceof BendableModelPart bendablePart)) {
+            LAST_VECTOR_BEND.remove(part);
+            return;
+        }
 
+        if (!hasExtendedBend) {
+            resetNativeBend(bendablePart, state.bendX());
+            LAST_VECTOR_BEND.remove(part);
+            return;
+        }
+
+        if (state.equals(previous)) {
+            return;
+        }
+
+        int appliedCount = applyExtendedBend(bendablePart, state);
+        if (appliedCount == 0) {
+            LAST_VECTOR_BEND.remove(part);
+            return;
+        }
+
+        LAST_VECTOR_BEND.put(part, state);
+    }
+
+    private static int resetNativeBend(BendableModelPart part, float bendX) {
+        int count = 0;
+        for (int index = 0; ; index++) {
+            BendableCube cube = part.bc$getCuboid(index);
+            if (cube == null) {
+                break;
+            }
+            applyNativeBendDirect(cube, bendX);
+            count++;
+        }
+        return count;
+    }
+
+    private static int applyExtendedBend(BendableModelPart part, BendVectorState state) {
+        int count = 0;
+        for (int index = 0; ; index++) {
+            BendableCube cube = part.bc$getCuboid(index);
+            if (cube == null) {
+                break;
+            }
+            applyExtendedBend(cube, state);
+            count++;
+        }
+        return count;
+    }
+
+    private static void applyExtendedBend(BendableCube cube, BendVectorState state) {
+        if (!(cube instanceof BendableCuboid cuboid)) {
+            cube.applyBend(state.bendX());
+            return;
+        }
+
+        Function<Vector3f, Vector3f> nativeBend = BendUtil.getBend(cube, state.bendX());
+        float pivotX = cube.getBendX();
+        float pivotY = cube.getBendY();
+        float pivotZ = cube.getBendZ();
+        float height = Math.max(EPSILON, cube.bendHeight());
+
+        cuboid.iteratePositions(original -> {
+            Vector3f vector = nativeBend.apply(original);
+            float factor = bendLowerSegmentFactor(original.y, pivotY, height);
+            if (hasTransform(state)) {
+                applyBendOnlyTransform(vector, factor, pivotX, pivotY, pivotZ, state);
+            }
+            if (!isZero(state.bendZ())) {
+                rotateZ(vector, pivotX, pivotY, pivotZ, -state.bendZ() * factor);
+            }
+            if (!isZero(state.bendY())) {
+                rotateY(vector, pivotX, pivotY, pivotZ, -state.bendY() * factor);
+            }
+            return vector;
+        });
     }
 
     public static void clearPartState(ModelPart part) {
-        LAST_VECTOR_BEND.remove(part);
+        BendVectorState previous = LAST_VECTOR_BEND.remove(part);
+        if (previous != null && (Object) part instanceof BendableModelPart bendablePart) {
+            resetNativeBend(bendablePart, 0.0F);
+        }
     }
 
-    public static void applyArmItemBend(PoseStack poseStack, PalMoreBendHolder bend, String context) {
+    public static void applyArmItemBend(PoseStack poseStack, PalMoreBendHolder bend) {
         float bendX = bend.palMore$getBendX();
         boolean hasBendY = !isZero(bend.palMore$getBendY());
         boolean hasBendZ = !isZero(bend.palMore$getBendZ());
@@ -59,22 +126,6 @@ public final class PalMoreBendableCuboids {
         }
 
         float pivotY = 0.25F;
-        PalMoreDebug.infoLimited(PalMoreDebug.ITEM,
-                "apply arm item bend context={} bend=({}, {}, {}) hasY={} hasZ={} pos=({}, {}, {}) scale=({}, {}, {}) hasTransform={} pivotY={}",
-                context,
-                bendX,
-                bend.palMore$getBendY(),
-                bend.palMore$getBendZ(),
-                hasBendY,
-                hasBendZ,
-                bend.palMore$getBendPositionX(),
-                bend.palMore$getBendPositionY(),
-                bend.palMore$getBendPositionZ(),
-                bend.palMore$getBendScaleX(),
-                bend.palMore$getBendScaleY(),
-                bend.palMore$getBendScaleZ(),
-                hasTransform,
-                pivotY);
         if (!isZero(bendX)) {
             poseStack.translate(0.0F, pivotY, 0.0F);
             poseStack.mulPose(Axis.XP.rotation(-bendX));
@@ -118,24 +169,32 @@ public final class PalMoreBendableCuboids {
         return Math.clamp((y - hingeY) / halfHeight, 0.0F, 1.0F);
     }
 
-    private static void applyBendOnlyTransform(Vector3f vector, float factor, float pivotX, float pivotY, float pivotZ, PalMoreBendHolder bend) {
-        float scaleX = lerp(1.0F, bend.palMore$getBendScaleX(), factor);
-        float scaleY = lerp(1.0F, bend.palMore$getBendScaleY(), factor);
-        float scaleZ = lerp(1.0F, bend.palMore$getBendScaleZ(), factor);
+    private static void applyBendOnlyTransform(Vector3f vector, float factor, float pivotX, float pivotY, float pivotZ, BendVectorState state) {
+        float scaleX = lerp(1.0F, state.scaleX(), factor);
+        float scaleY = lerp(1.0F, state.scaleY(), factor);
+        float scaleZ = lerp(1.0F, state.scaleZ(), factor);
 
-        vector.x = pivotX + (vector.x - pivotX) * scaleX + bend.palMore$getBendPositionX() * factor;
-        vector.y = pivotY + (vector.y - pivotY) * scaleY - bend.palMore$getBendPositionY() * factor;
-        vector.z = pivotZ + (vector.z - pivotZ) * scaleZ + bend.palMore$getBendPositionZ() * factor;
+        vector.x = pivotX + (vector.x - pivotX) * scaleX + state.positionX() * factor;
+        vector.y = pivotY + (vector.y - pivotY) * scaleY - state.positionY() * factor;
+        vector.z = pivotZ + (vector.z - pivotZ) * scaleZ + state.positionZ() * factor;
     }
 
     private static boolean hasBendTransform(PalMoreBendHolder bend) {
-        return bend.palMore$hasBendTransformOverride()
-                && (!isZero(bend.palMore$getBendPositionX())
-                || !isZero(bend.palMore$getBendPositionY())
-                || !isZero(bend.palMore$getBendPositionZ())
-                || !isZero(bend.palMore$getBendScaleX() - 1.0F)
-                || !isZero(bend.palMore$getBendScaleY() - 1.0F)
-                || !isZero(bend.palMore$getBendScaleZ() - 1.0F));
+        return hasTransform(BendVectorState.from(bend));
+    }
+
+    private static boolean hasExtendedBend(BendVectorState state) {
+        return !isZero(state.bendY()) || !isZero(state.bendZ()) || hasTransform(state);
+    }
+
+    private static boolean hasTransform(BendVectorState state) {
+        return state.transformOverride()
+                && (!isZero(state.positionX())
+                || !isZero(state.positionY())
+                || !isZero(state.positionZ())
+                || !isZero(state.scaleX() - 1.0F)
+                || !isZero(state.scaleY() - 1.0F)
+                || !isZero(state.scaleZ() - 1.0F));
     }
 
     private static float lerp(float start, float end, float delta) {
@@ -173,7 +232,22 @@ public final class PalMoreBendableCuboids {
             float positionZ,
             float scaleX,
             float scaleY,
-            float scaleZ
+            float scaleZ,
+            boolean transformOverride
     ) {
+        static BendVectorState from(PalMoreBendHolder bend) {
+            return new BendVectorState(
+                    bend.palMore$getBendX(),
+                    bend.palMore$getBendY(),
+                    bend.palMore$getBendZ(),
+                    bend.palMore$getBendPositionX(),
+                    bend.palMore$getBendPositionY(),
+                    bend.palMore$getBendPositionZ(),
+                    bend.palMore$getBendScaleX(),
+                    bend.palMore$getBendScaleY(),
+                    bend.palMore$getBendScaleZ(),
+                    bend.palMore$hasBendTransformOverride()
+            );
+        }
     }
 }

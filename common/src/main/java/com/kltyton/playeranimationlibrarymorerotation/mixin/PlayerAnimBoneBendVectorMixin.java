@@ -1,7 +1,6 @@
 package com.kltyton.playeranimationlibrarymorerotation.mixin;
 
 import com.kltyton.playeranimationlibrarymorerotation.compat.PalMoreBendHolder;
-import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.zigythebird.playeranimcore.animation.Animation;
 import com.zigythebird.playeranimcore.bones.AdvancedPlayerAnimBone;
 import com.zigythebird.playeranimcore.bones.PlayerAnimBone;
@@ -225,23 +224,6 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
                     holder.palMore$getBendScaleZ()
             );
             palMore$setBendTransformOverride(true);
-            if (PalMoreDebug.enabled()) {
-                PlayerAnimBone self = (PlayerAnimBone) (Object) this;
-                PalMoreDebug.infoLimited(PalMoreDebug.COPY,
-                        "copy target={} from={} bend=({}, {}, {}) pos=({}, {}, {}) scale=({}, {}, {}) sourceClass={}",
-                        self.getName(),
-                        bone.getName(),
-                        holder.palMore$getBendX(),
-                        holder.palMore$getBendY(),
-                        holder.palMore$getBendZ(),
-                        holder.palMore$getBendPositionX(),
-                        holder.palMore$getBendPositionY(),
-                        holder.palMore$getBendPositionZ(),
-                        holder.palMore$getBendScaleX(),
-                        holder.palMore$getBendScaleY(),
-                        holder.palMore$getBendScaleZ(),
-                        bone.getClass().getName());
-            }
         } else {
             palMore$resetBendTransform();
         }

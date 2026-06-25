@@ -19,3 +19,6 @@ hs_err_pid*
 
 # Common working directory
 run
+
+# Local animation diagnostics
+common/src/main/resources/assets/playeranimationlibrarymorerotation/player_animations/animation.json

@@ -5,7 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.kltyton.playeranimationlibrarymorerotation.Playeranimationlibrarymorerotation;
-import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.zigythebird.playeranim.animation.PlayerAnimResources;
 import com.zigythebird.playeranimcore.PlayerAnimLib;
 import com.zigythebird.playeranimcore.animation.Animation;
@@ -47,7 +46,6 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
     public static final Identifier KEY = Playeranimationlibrarymorerotation.id("bend_vectors");
     private static volatile Map<Animation, Map<String, KeyframeStack>> bendTracks = Map.of();
     private static volatile Map<Animation, Map<String, BendPartTracks>> bendPartTracks = Map.of();
-    private static volatile Map<Animation, Identifier> animationIds = Map.of();
 
     public static Map<String, KeyframeStack> getBendTracks(Animation animation) {
         return bendTracks.getOrDefault(animation, Map.of());
@@ -55,10 +53,6 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
 
     public static Map<String, BendPartTracks> getBendPartTracks(Animation animation) {
         return bendPartTracks.getOrDefault(animation, Map.of());
-    }
-
-    public static @Nullable Identifier getAnimationId(Animation animation) {
-        return animationIds.get(animation);
     }
 
     public static int getLoadedAnimationCount() {
@@ -72,7 +66,6 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
     public void onResourceManagerReload(@NotNull ResourceManager manager) {
         Map<Animation, Map<String, KeyframeStack>> loadedTracks = new IdentityHashMap<>();
         Map<Animation, Map<String, BendPartTracks>> loadedPartTracks = new IdentityHashMap<>();
-        Map<Animation, Identifier> loadedIds = new IdentityHashMap<>();
 
         for (var resourceEntry : manager.listResources("player_animations", id -> id.getPath().endsWith(".json")).entrySet()) {
             Identifier resourceId = resourceEntry.getKey();
@@ -89,59 +82,18 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
                     Identifier animationId = Identifier.fromNamespaceAndPath(resourceId.getNamespace(), animationEntry.getKey());
                     Animation animation = PlayerAnimResources.getAnimation(animationId);
                     if (animation == null || !animationEntry.getValue().isJsonObject()) {
-                        PalMoreDebug.infoOnce("missing-animation:" + animationId,
-                                "resource {} animation {} was visible to PalMore, but PAL registry returned {}",
-                                resourceId, animationId, animation);
                         continue;
                     }
 
-                    loadedIds.put(animation, animationId);
                     JsonObject animationObject = animationEntry.getValue().getAsJsonObject();
-                    if (PalMoreDebug.shouldLog(animationId)) {
-                        PalMoreDebug.verboseLimited(PalMoreDebug.RESOURCE,
-                                "scan resource={} id={} hasBones={} formatVersion={}",
-                                resourceId,
-                                animationId,
-                                animationObject.has("bones"),
-                                root.has("format_version") ? root.get("format_version") : "<missing>");
-                    }
 
-                    Map<String, KeyframeStack> tracks = loadAnimationBendTracks(animationObject, animationId);
+                    Map<String, KeyframeStack> tracks = loadAnimationBendTracks(animationObject);
                     if (!tracks.isEmpty()) {
                         loadedTracks.put(animation, Map.copyOf(tracks));
-                        if (PalMoreDebug.shouldLog(animationId)) {
-                            PalMoreDebug.infoLimited(PalMoreDebug.RESOURCE,
-                                    "loaded vector bend tracks id={} resource={} targets={}",
-                                    animationId,
-                                    resourceId,
-                                    tracks.keySet());
-                            for (Map.Entry<String, KeyframeStack> debugEntry : tracks.entrySet()) {
-                                PalMoreDebug.verboseLimited(PalMoreDebug.RESOURCE,
-                                        "  vector target={} bend={}",
-                                        debugEntry.getKey(),
-                                        describeStack(debugEntry.getValue()));
-                            }
-                        }
                     }
-                    Map<String, BendPartTracks> partTracks = loadAnimationBendPartTracks(animationObject, animationId);
+                    Map<String, BendPartTracks> partTracks = loadAnimationBendPartTracks(animationObject);
                     if (!partTracks.isEmpty()) {
                         loadedPartTracks.put(animation, Map.copyOf(partTracks));
-                        if (PalMoreDebug.shouldLog(animationId)) {
-                            PalMoreDebug.infoLimited(PalMoreDebug.RESOURCE,
-                                    "loaded bend-part tracks id={} resource={} bones={}",
-                                    animationId,
-                                    resourceId,
-                                    partTracks.keySet());
-                            for (Map.Entry<String, BendPartTracks> debugEntry : partTracks.entrySet()) {
-                                BendPartTracks debugTracks = debugEntry.getValue();
-                                PalMoreDebug.infoLimited(PalMoreDebug.RESOURCE,
-                                        "  target={} bend={} position={} scale={}",
-                                        debugEntry.getKey(),
-                                        describeStack(debugTracks.bend()),
-                                        describeStack(debugTracks.position()),
-                                        describeStack(debugTracks.scale()));
-                            }
-                        }
                     }
                 }
             } catch (Exception exception) {
@@ -151,13 +103,9 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
 
         bendTracks = Collections.unmodifiableMap(loadedTracks);
         bendPartTracks = Collections.unmodifiableMap(loadedPartTracks);
-        animationIds = Collections.unmodifiableMap(loadedIds);
-        PalMoreDebug.infoLimited(PalMoreDebug.RESOURCE,
-                "reload complete: vectorBendAnimations={} bendPartAnimations={} knownAnimations={}",
-                bendTracks.size(), bendPartTracks.size(), animationIds.size());
     }
 
-    private static Map<String, KeyframeStack> loadAnimationBendTracks(JsonObject animationObj, Identifier animationId) {
+    private static Map<String, KeyframeStack> loadAnimationBendTracks(JsonObject animationObj) {
         JsonObject bonesObj = JsonUtil.getAsJsonObject(animationObj, "bones", new JsonObject());
         Map<String, KeyframeStack> tracks = new HashMap<>(bonesObj.size());
 
@@ -173,24 +121,11 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
 
             String boneName = UniversalAnimLoader.getCorrectPlayerBoneName(entry.getKey());
             if (!isSupportedBendTransformBone(boneName)) {
-                if (PalMoreDebug.shouldLog(animationId)) {
-                    PalMoreDebug.verboseLimited(PalMoreDebug.RESOURCE,
-                            "ignore vector bend id={} rawBone={} normalizedBone={} reason=unsupported bend target",
-                            animationId,
-                            entry.getKey(),
-                            boneName);
-                }
                 continue;
             }
 
             JsonElement bendRotation = getBendRotationElement(boneObj.get("bend"));
             if (bendRotation == null) {
-                if (PalMoreDebug.shouldLog(animationId)) {
-                    PalMoreDebug.verboseLimited(PalMoreDebug.RESOURCE,
-                            "ignore vector bend id={} target={} reason=no bend rotation element",
-                            animationId,
-                            boneName);
-                }
                 continue;
             }
 
@@ -203,7 +138,7 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         return tracks;
     }
 
-    private static Map<String, BendPartTracks> loadAnimationBendPartTracks(JsonObject animationObj, Identifier animationId) {
+    private static Map<String, BendPartTracks> loadAnimationBendPartTracks(JsonObject animationObj) {
         JsonObject bonesObj = JsonUtil.getAsJsonObject(animationObj, "bones", new JsonObject());
         Map<String, BendPartTracks> tracks = new HashMap<>(bonesObj.size());
 
@@ -214,13 +149,6 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
 
             String boneName = UniversalAnimLoader.getCorrectPlayerBoneName(entry.getKey());
             if (!isSupportedBendTransformBone(boneName)) {
-                if (PalMoreDebug.shouldLog(animationId)) {
-                    PalMoreDebug.verboseLimited(PalMoreDebug.RESOURCE,
-                            "ignore bend-part id={} rawBone={} normalizedBone={} reason=unsupported bend target",
-                            animationId,
-                            entry.getKey(),
-                            boneName);
-                }
                 continue;
             }
 
@@ -228,12 +156,6 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
             JsonElement bendElement = boneObj.get("bend");
             boolean compoundBend = isCompoundBendElement(bendElement);
             if (!compoundBend) {
-                if (PalMoreDebug.shouldLog(animationId) && bendElement != null) {
-                    PalMoreDebug.verboseLimited(PalMoreDebug.RESOURCE,
-                            "ignore bend-part id={} target={} reason=legacy/simple bend is handled as rotation-only vector track",
-                            animationId,
-                            boneName);
-                }
                 continue;
             }
 
@@ -591,13 +513,6 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         if (keyframes.size() > 1) {
             keyframes.sort(Comparator.comparingDouble(FloatObjectPair::leftFloat));
         }
-    }
-
-    private static String describeStack(KeyframeStack stack) {
-        return "x=" + stack.xKeyframes().size()
-                + ",y=" + stack.yKeyframes().size()
-                + ",z=" + stack.zKeyframes().size()
-                + ",any=" + stack.hasKeyframes();
     }
 
     public record BendPartTracks(KeyframeStack bend, KeyframeStack position, KeyframeStack scale) {

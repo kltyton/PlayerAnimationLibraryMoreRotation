@@ -3,7 +3,6 @@ package com.kltyton.playeranimationlibrarymorerotation.mixin;
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.kltyton.playeranimationlibrarymorerotation.client.compat.PalMoreBendableCuboids;
 import com.kltyton.playeranimationlibrarymorerotation.compat.PalMoreBendHolder;
-import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.zigythebird.playeranim.accessors.IAvatarAnimationState;
 import com.zigythebird.playeranim.animation.AvatarAnimManager;
@@ -52,22 +51,9 @@ public class ItemInHandLayerBendVectorMixin {
     ) {
         PlayerAnimBone armBone = palMore$getActiveArmBone(renderState, arm);
         if (armBone == null) {
-            PalMoreDebug.verboseLimited(PalMoreDebug.ITEM,
-                    "skip parent arm scale arm={} item={} reason=no active PAL arm transform",
-                    arm,
-                    itemStack);
             return;
         }
 
-        PalMoreDebug.verboseLimited(PalMoreDebug.ITEM,
-                "parent arm transform arm={} item={} scale=({}, {}, {}) bend={} boneClass={}",
-                arm,
-                itemStack,
-                armBone.scale.x,
-                armBone.scale.y,
-                armBone.scale.z,
-                armBone.bend,
-                armBone.getClass().getName());
         if (armBone.scale.x != 1.0F || armBone.scale.y != 1.0F || armBone.scale.z != 1.0F) {
             poseStack.scale(armBone.scale.x, armBone.scale.y, armBone.scale.z);
         }
@@ -92,28 +78,7 @@ public class ItemInHandLayerBendVectorMixin {
     ) {
         PlayerAnimBone armBone = palMore$getActiveArmBone(renderState, arm);
         if (armBone instanceof PalMoreBendHolder holder) {
-            PalMoreDebug.verboseLimited(PalMoreDebug.ITEM,
-                    "held item bend follow arm={} item={} bend=({}, {}, {}) pos=({}, {}, {}) scale=({}, {}, {}) override=({},{})",
-                    arm,
-                    itemStack,
-                    holder.palMore$getBendX(),
-                    holder.palMore$getBendY(),
-                    holder.palMore$getBendZ(),
-                    holder.palMore$getBendPositionX(),
-                    holder.palMore$getBendPositionY(),
-                    holder.palMore$getBendPositionZ(),
-                    holder.palMore$getBendScaleX(),
-                    holder.palMore$getBendScaleY(),
-                    holder.palMore$getBendScaleZ(),
-                    holder.palMore$hasBendVectorOverride(),
-                    holder.palMore$hasBendTransformOverride());
-            PalMoreBendableCuboids.applyArmItemBend(poseStack, holder, arm + "/" + itemStack);
-        } else {
-            PalMoreDebug.verboseLimited(PalMoreDebug.ITEM,
-                    "skip held item bend follow arm={} item={} reason=no PalMore bend holder boneClass={}",
-                    arm,
-                    itemStack,
-                    armBone == null ? "null" : armBone.getClass().getName());
+            PalMoreBendableCuboids.applyArmItemBend(poseStack, holder);
         }
     }
 
