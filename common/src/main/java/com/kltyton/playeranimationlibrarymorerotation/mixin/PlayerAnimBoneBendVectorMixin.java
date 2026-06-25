@@ -188,7 +188,7 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
         palMore$copyBendTransform(bone);
     }
 
-    @Inject(method = "beginOrEndTickLerp", at = @At("RETURN"))
+    @Inject(method = "beginOrEndTickLerp(Lcom/zigythebird/playeranimcore/bones/AdvancedPlayerAnimBone;FLcom/zigythebird/playeranimcore/animation/Animation;)V", at = @At("RETURN"))
     private void palMore$copyVectorBendDuringTickLerp(AdvancedPlayerAnimBone bone, float animTime, Animation animation, CallbackInfo ci) {
         if (bone.isBendEnabled()) {
             palMore$copyVectorBend(bone, ((PlayerAnimBone) (Object) this).bend);
