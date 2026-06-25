@@ -1,10 +1,13 @@
 # PlayerAnimationLibraryMoreRotation
 
-一个 Fabric / NeoForge 多加载器运行时兼容库，用 Mixin 扩展
-Player Animation Library 和 bendable-cuboids 的玩家动画能力，并提供通用的
-PAL 播放/停止/服务端同步 API。
+Language: English | [中文](README_zh.md)
 
-## 支持版本
+PlayerAnimationLibraryMoreRotation is a Fabric / NeoForge runtime compatibility
+library for Player Animation Library and bendable-cuboids. It uses targeted
+Mixin patches to extend player animation behavior and also provides a small PAL
+playback/sync API for downstream mods.
+
+## Supported Versions
 
 - Minecraft: `26.1.2`
 - Fabric Loader: `0.19.3`
@@ -12,60 +15,64 @@ PAL 播放/停止/服务端同步 API。
 - NeoForge: `26.1.2.76`
 - Player Animation Library Fabric / Neo: `1.2.4+mc.26.1`
 - bendable-cuboids: `2.0.2`
-- Forge Config API Port: `26.1.5`（Fabric）
 - Java: `25`
 
-## 功能
+## Features
 
-- 为 PAL 的玩家骨骼 `bend` 增加 Y/Z 轴数据承载与渲染应用。
-- 为 bend 骨骼增加位移和尺寸支持，推荐写在真实玩家骨骼的 `bend.position` / `bend.scale` 下。
-- 保留旧动画的 X 轴 bend 行为，`bend: 35` 和 `bend: [35, 0, 0]` 继续可用。
-- 支持 JSON 中的 vector bend，例如 `bend: [x, y, z]`、`post: [x, y, z]`、`pre: [x, y, z]`。
-- 补充 `left_item` / `right_item` 手持物品骨骼的 Y/Z 旋转应用。
-- 对 JSON keyframe 按时间排序，让导出顺序不稳定的动画更可预测。
-- 提供通用播放 API、停止 API、服务端同维度广播同步、客户端收包播放。
+- Adds Y/Z sidecar data and rendering support for PAL player bone `bend`.
+- Adds bend-local `position` and `scale` support through `bend.position` and
+  `bend.scale` on real player bones.
+- Keeps legacy X-only bend behavior compatible. `bend: 35` and
+  `bend: [35, 0, 0]` still work.
+- Supports vector bend JSON such as `bend: [x, y, z]`, `post: [x, y, z]`, and
+  `pre: [x, y, z]`.
+- Extends `left_item` / `right_item` held-item Y/Z rotation handling.
+- Sorts JSON keyframes by timestamp for more predictable exported animations.
+- Provides reusable play, stop, server sync, and client receive APIs for PAL
+  animations.
 
-## 动画资源路径
+## Animation Resource Path
 
-PAL 仍按原规则加载动画：
+PAL still loads animations from:
 
 ```text
 assets/<namespace>/player_animations/*.json
 ```
 
-动画 ID 是：
+The runtime animation id is:
 
 ```text
-<namespace>:<animations 对象里的 key>
+<namespace>:<key inside the animations object>
 ```
 
-例如：
+Example:
 
 ```text
-assets/mod_id/player_animations/animation.json
+assets/mob_battle/player_animations/poison_knife_animation.json
 ```
 
-其中 JSON 包含：
+with:
 
 ```json
 {
   "animations": {
-    "animation": {}
+    "poison_knife_animation": {}
   }
 }
 ```
 
-则动画 ID 为：
+uses this animation id:
 
 ```text
-mod_id:animation
+mob_battle:poison_knife_animation
 ```
 
-## bend JSON 格式
+## Bend JSON Format
 
-本库只支持真实玩家骨骼上的 `bend`。不要把 bend 变换写成额外的虚拟骨骼。
+This library only supports `bend` on real player bones. Do not write bend
+transforms as extra virtual bones.
 
-支持的第一种写法：旧 scalar bend，等价于 `[x, 0, 0]`：
+Supported form 1: legacy scalar bend, equivalent to `[x, 0, 0]`:
 
 ```json
 {
@@ -77,8 +84,9 @@ mod_id:animation
 }
 ```
 
-支持的第二种写法：三轴数组或旧时间轴对象。如果 `bend` 对象里没有
-`rotation`、`position`、`scale`，就默认当作 `rotation` 解析：
+Supported form 2: three-axis array or legacy timeline object. If a `bend`
+object has no `rotation`, `position`, or `scale` member, it is treated as the
+rotation track:
 
 ```json
 {
@@ -97,16 +105,18 @@ mod_id:animation
 }
 ```
 
-说明：
+Notes:
 
-- X 轴 bend 仍交给 PAL / bendable-cuboids 原有路径。
-- Y/Z bend 由本库 sidecar 数据保存，并在 bendable-cuboids 渲染路径中应用。
-- `{"value": 35}` 会按 `[35, 0, 0]` 处理。
-- bendable-cuboids 本身仍是单轴 bend API，本库的 Y/Z 是叠加在其 mesh 顶点上的兼容实现。
+- X bend still flows through PAL / bendable-cuboids' native path.
+- Y/Z bend is stored in this library's sidecar data and applied in the
+  bendable-cuboids rendering path.
+- `{"value": 35}` is treated as `[35, 0, 0]`.
+- bendable-cuboids itself still exposes a single-axis bend API. This library
+  layers Y/Z bend as a compatibility mesh transform.
 
-## bend 骨骼位移和尺寸
+## Bend Bone Position And Scale
 
-支持的第三种写法：把 bend 的三类通道放在同一个真实玩家骨骼下：
+Supported form 3: bend channels under the same real player bone:
 
 ```json
 {
@@ -134,29 +144,35 @@ mod_id:animation
 }
 ```
 
-说明：
+`bend.rotation` is the same vector bend channel as the old `bend` timeline.
+`bend.position` / `bend.scale` apply to the same rendered body part. `post`,
+`pre`, `vector`, and `{"value": ...}` keyframes are supported.
 
-- `position` 单位沿用 PAL / Minecraft 模型单位。
-- `scale` 是倍率，`1` 是原尺寸，不是 `0`。
-- `bend.position` 和 `bend.scale` 只修改 bend 下半段网格顶点，不会平移或缩放整条手臂、腿或身体关节。
-- 没有写 `bend.position` / `bend.scale` 的旧动画不受影响。
+Notes:
 
-## 服务端播放 API
+- `position` uses the same model units as PAL / Minecraft model parts.
+- `scale` is a multiplier. `1` means original size, not zero.
+- `bend.position` and `bend.scale` modify only the lower bend-segment mesh
+  vertices; they do not move or resize the whole arm, leg, body part, or joint.
+- Existing animations without `bend.position` / `bend.scale` are unchanged.
+
+## Server Playback API
 
 ```java
 import com.kltyton.playeranimationlibrarymorerotation.PalMoreAnimations;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
-Identifier animation = Identifier.fromNamespaceAndPath("mod_id", "animation");
+Identifier animation = Identifier.fromNamespaceAndPath("mob_battle", "poison_knife_animation");
 
 PalMoreAnimations.play((ServerPlayer) player, animation);
 PalMoreAnimations.stop((ServerPlayer) player);
 ```
 
-服务端会向同维度内支持本库 payload 的客户端广播。
+The server broadcasts to same-dimension clients that support this library's
+payload.
 
-## 客户端播放 API
+## Client Playback API
 
 ```java
 import com.kltyton.playeranimationlibrarymorerotation.client.PalMoreClientAnimations;
@@ -165,13 +181,13 @@ import net.minecraft.world.entity.Avatar;
 
 PalMoreClientAnimations.playLocal(
         avatar,
-        Identifier.fromNamespaceAndPath("mod_id", "animation")
+        Identifier.fromNamespaceAndPath("mob_battle", "poison_knife_animation")
 );
 
 PalMoreClientAnimations.stopLocal(avatar);
 ```
 
-可选第一人称配置：
+Optional first-person configuration:
 
 ```java
 PalMoreClientAnimations.playLocal(
@@ -181,15 +197,15 @@ PalMoreClientAnimations.playLocal(
 );
 ```
 
-## 网络 payload
+## Network Payload
 
-本库注册的 clientbound payload：
+Clientbound payload id:
 
 ```text
 playeranimationlibrarymorerotation:player_animation
 ```
 
-字段：
+Fields:
 
 ```text
 avatarEntityId: VarInt
@@ -197,40 +213,9 @@ animationId: Identifier
 stop: Boolean
 ```
 
-下游模组不需要重复注册这个 payload 或客户端 receiver。
+Downstream mods do not need to register this payload or receiver again.
 
-## 调试日志
-
-调试日志默认关闭。首次启动客户端后，可在客户端配置文件里启用：
-
-```text
-config/playeranimationlibrarymorerotation-client.toml
-```
-
-常用配置：
-
-```toml
-[debug]
-enabled = true
-verbose = true
-logAllAnimations = false
-animationFilter = "playeranimationlibrarymorerotation,poison_knife"
-resourceLogLimit = 160
-frameLogLimit = 2000
-copyLogLimit = 400
-renderLogLimit = 1000
-itemLogLimit = 1000
-```
-
-说明：
-
-- `enabled` 控制全部 PALMore 调试日志。
-- `verbose` 会输出资源解析、逐帧计算、渲染和手持物品跟随的更细信息。
-- `animationFilter` 用逗号分隔，可填写 namespace、路径或完整动画 ID 的一部分。
-- `logAllAnimations = true` 会记录所有动画，日志量会很大。
-- 日志前缀为 `[PalMore/BendDebug/<category>]`，常见 category 有 `resource`、`frame`、`copy`、`render`、`item`。
-
-## 初始化入口
+## Entrypoints
 
 - Fabric main entrypoint:
   `com.kltyton.playeranimationlibrarymorerotation.fabric.PlayeranimationlibrarymorerotationFabric`
@@ -239,34 +224,40 @@ itemLogLimit = 1000
 - NeoForge mod entrypoint:
   `com.kltyton.playeranimationlibrarymorerotation.neoforge.PlayeranimationlibrarymorerotationNeoForge`
 
-## 测试命令
+## Test Command
 
-下游项目把动画放到自己的 `assets/<namespace>/player_animations/` 后，可以在客户端中使用 PAL 命令测试：
+After a downstream mod places animations under its own
+`assets/<namespace>/player_animations/` directory, use PAL's command in a
+client world:
 
 ```text
 /testPlayerAnimation <namespace>:<animation>
 ```
 
-## 已知限制
+## Known Limitations
 
-- Y/Z bend 是兼容层实现，不是 bendable-cuboids 官方三轴 ABI。
-- 旧的 PlayerAnimator 二进制/旧格式 bend 仍走 PAL 原生 X 轴行为。
-- begin/end tick 淡入淡出保留 PAL 的 X bend lerp，Y/Z 还没有独立 transition length。
-- `bend.position/scale` 是运行时兼容层能力，不会新增 PAL 普通玩家骨骼。
+- Y/Z bend is a compatibility implementation, not an upstream bendable-cuboids
+  three-axis ABI.
+- Legacy PlayerAnimator binary/old-format bend still uses PAL's native X-only
+  behavior.
+- begin/end tick fade keeps PAL's native X bend lerp; Y/Z do not yet have
+  separate transition lengths.
+- `bend.position/scale` is a runtime compatibility feature and does not
+  register extra normal PAL player bones.
 
-## 构建
+## Build
 
 ```powershell
 .\gradlew.bat build
 ```
 
-Fabric 客户端启动验证：
+Fabric client launch validation:
 
 ```powershell
 .\gradlew.bat :fabric:runClient
 ```
 
-NeoForge 客户端启动验证：
+NeoForge client launch validation:
 
 ```powershell
 .\gradlew.bat :neoforge:runClient
