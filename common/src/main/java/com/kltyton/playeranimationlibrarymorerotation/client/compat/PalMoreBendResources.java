@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.kltyton.playeranimationlibrarymorerotation.Playeranimationlibrarymorerotation;
+import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.zigythebird.playeranim.animation.PlayerAnimResources;
 import com.zigythebird.playeranimcore.PlayerAnimLib;
 import com.zigythebird.playeranimcore.animation.Animation;
@@ -23,6 +24,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import team.unnamed.mocha.parser.ast.AccessExpression;
 import team.unnamed.mocha.parser.ast.Expression;
 import team.unnamed.mocha.parser.ast.FloatExpression;
@@ -44,9 +46,19 @@ import static com.zigythebird.playeranimcore.molang.MolangLoader.MOCHA_ENGINE;
 public final class PalMoreBendResources implements ResourceManagerReloadListener {
     public static final Identifier KEY = Playeranimationlibrarymorerotation.id("bend_vectors");
     private static volatile Map<Animation, Map<String, KeyframeStack>> bendTracks = Map.of();
+    private static volatile Map<Animation, Map<String, BendPartTracks>> bendPartTracks = Map.of();
+    private static volatile Map<Animation, Identifier> animationIds = Map.of();
 
     public static Map<String, KeyframeStack> getBendTracks(Animation animation) {
         return bendTracks.getOrDefault(animation, Map.of());
+    }
+
+    public static Map<String, BendPartTracks> getBendPartTracks(Animation animation) {
+        return bendPartTracks.getOrDefault(animation, Map.of());
+    }
+
+    public static @Nullable Identifier getAnimationId(Animation animation) {
+        return animationIds.get(animation);
     }
 
     public static int getLoadedAnimationCount() {
@@ -59,6 +71,8 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
     @Override
     public void onResourceManagerReload(@NotNull ResourceManager manager) {
         Map<Animation, Map<String, KeyframeStack>> loadedTracks = new IdentityHashMap<>();
+        Map<Animation, Map<String, BendPartTracks>> loadedPartTracks = new IdentityHashMap<>();
+        Map<Animation, Identifier> loadedIds = new IdentityHashMap<>();
 
         for (var resourceEntry : manager.listResources("player_animations", id -> id.getPath().endsWith(".json")).entrySet()) {
             Identifier resourceId = resourceEntry.getKey();
@@ -75,12 +89,32 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
                     Identifier animationId = Identifier.fromNamespaceAndPath(resourceId.getNamespace(), animationEntry.getKey());
                     Animation animation = PlayerAnimResources.getAnimation(animationId);
                     if (animation == null || !animationEntry.getValue().isJsonObject()) {
+                        PalMoreDebug.infoOnce("missing-animation:" + animationId,
+                                "resource {} animation {} was visible to PalMore, but PAL registry returned {}",
+                                resourceId, animationId, animation);
                         continue;
                     }
 
-                    Map<String, KeyframeStack> tracks = loadAnimationBendTracks(animationEntry.getValue().getAsJsonObject());
+                    loadedIds.put(animation, animationId);
+                    JsonObject animationObject = animationEntry.getValue().getAsJsonObject();
+                    Map<String, KeyframeStack> tracks = loadAnimationBendTracks(animationObject);
                     if (!tracks.isEmpty()) {
                         loadedTracks.put(animation, Map.copyOf(tracks));
+                    }
+                    Map<String, BendPartTracks> partTracks = loadAnimationBendPartTracks(animationObject);
+                    if (!partTracks.isEmpty()) {
+                        loadedPartTracks.put(animation, Map.copyOf(partTracks));
+                        if (PalMoreDebug.shouldLog(animationId)) {
+                            PalMoreDebug.info("loaded bend-part tracks id={} resource={} bones={}", animationId, resourceId, partTracks.keySet());
+                            for (Map.Entry<String, BendPartTracks> debugEntry : partTracks.entrySet()) {
+                                BendPartTracks debugTracks = debugEntry.getValue();
+                                PalMoreDebug.info("  target={} bend={} position={} scale={}",
+                                        debugEntry.getKey(),
+                                        debugTracks.bend().hasKeyframes(),
+                                        debugTracks.position().hasKeyframes(),
+                                        debugTracks.scale().hasKeyframes());
+                            }
+                        }
                     }
                 }
             } catch (Exception exception) {
@@ -89,6 +123,10 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         }
 
         bendTracks = Collections.unmodifiableMap(loadedTracks);
+        bendPartTracks = Collections.unmodifiableMap(loadedPartTracks);
+        animationIds = Collections.unmodifiableMap(loadedIds);
+        PalMoreDebug.info("reload complete: vectorBendAnimations={} bendPartAnimations={} knownAnimations={}",
+                bendTracks.size(), bendPartTracks.size(), animationIds.size());
     }
 
     private static Map<String, KeyframeStack> loadAnimationBendTracks(JsonObject animationObj) {
@@ -105,22 +143,114 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
                 continue;
             }
 
-            KeyframeStack stack = buildKeyframeStack(getKeyframes(boneObj.get("bend")), TransformType.BEND);
+            String boneName = UniversalAnimLoader.getCorrectPlayerBoneName(entry.getKey());
+            if (!isSupportedBendTransformBone(boneName)) {
+                continue;
+            }
+
+            JsonElement bendRotation = getBendRotationElement(boneObj.get("bend"));
+            if (bendRotation == null) {
+                continue;
+            }
+
+            KeyframeStack stack = buildKeyframeStack(getKeyframes(bendRotation, TransformType.BEND), TransformType.BEND);
             if (stack.hasKeyframes()) {
-                tracks.put(UniversalAnimLoader.getCorrectPlayerBoneName(entry.getKey()), stack);
+                tracks.put(boneName, stack);
             }
         }
 
         return tracks;
     }
 
-    private static List<FloatObjectPair<JsonElement>> getKeyframes(JsonElement element) {
+    private static Map<String, BendPartTracks> loadAnimationBendPartTracks(JsonObject animationObj) {
+        JsonObject bonesObj = JsonUtil.getAsJsonObject(animationObj, "bones", new JsonObject());
+        Map<String, BendPartTracks> tracks = new HashMap<>(bonesObj.size());
+
+        for (Map.Entry<String, JsonElement> entry : bonesObj.entrySet()) {
+            if (!entry.getValue().isJsonObject()) {
+                continue;
+            }
+
+            String boneName = UniversalAnimLoader.getCorrectPlayerBoneName(entry.getKey());
+            if (!isSupportedBendTransformBone(boneName)) {
+                continue;
+            }
+
+            JsonObject boneObj = entry.getValue().getAsJsonObject();
+            JsonElement bendElement = boneObj.get("bend");
+            boolean compoundBend = isCompoundBendElement(bendElement);
+            if (!compoundBend) {
+                continue;
+            }
+
+            JsonElement bendRotation = getBendRotationElement(bendElement);
+            KeyframeStack bend = bendRotation != null
+                    ? buildKeyframeStack(getKeyframes(bendRotation, TransformType.BEND), TransformType.BEND)
+                    : new KeyframeStack();
+            JsonElement positionElement = getBendTransformElement(bendElement, "position");
+            JsonElement scaleElement = getBendTransformElement(bendElement, "scale");
+            KeyframeStack position = positionElement != null
+                    ? buildKeyframeStack(getKeyframes(positionElement, TransformType.POSITION), TransformType.POSITION)
+                    : new KeyframeStack();
+            KeyframeStack scale = scaleElement != null
+                    ? buildKeyframeStack(getKeyframes(scaleElement, TransformType.SCALE), TransformType.SCALE)
+                    : new KeyframeStack();
+
+            if (bend.hasKeyframes() || position.hasKeyframes() || scale.hasKeyframes()) {
+                tracks.put(boneName, new BendPartTracks(bend, position, scale));
+            }
+        }
+
+        return tracks;
+    }
+
+    private static boolean isSupportedBendTransformBone(String boneName) {
+        return switch (boneName) {
+            case "torso", "right_arm", "left_arm", "right_leg", "left_leg" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isCompoundBendElement(@Nullable JsonElement element) {
+        if (element == null || !element.isJsonObject()) {
+            return false;
+        }
+
+        JsonObject obj = element.getAsJsonObject();
+        return obj.has("rotation") || obj.has("position") || obj.has("scale");
+    }
+
+    private static @Nullable JsonElement getBendRotationElement(@Nullable JsonElement bendElement) {
+        if (bendElement == null) {
+            return null;
+        }
+
+        if (isCompoundBendElement(bendElement)) {
+            JsonObject bendObj = bendElement.getAsJsonObject();
+            return bendObj.has("rotation") ? bendObj.get("rotation") : null;
+        }
+
+        return bendElement;
+    }
+
+    private static @Nullable JsonElement getBendTransformElement(@Nullable JsonElement bendElement, String memberName) {
+        if (isCompoundBendElement(bendElement)) {
+            JsonObject bendObj = bendElement.getAsJsonObject();
+            if (bendObj.has(memberName)) {
+                return bendObj.get(memberName);
+            }
+        }
+
+        return null;
+    }
+
+    private static List<FloatObjectPair<JsonElement>> getKeyframes(JsonElement element, TransformType type) {
         if (element == null) {
             return List.of();
         }
 
         if (element.isJsonPrimitive()) {
-            element = scalarBendVector(element);
+            element = scalarVector(element, type, false);
         }
 
         if (element.isJsonArray()) {
@@ -134,11 +264,7 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
             }
 
             if (obj.has("value")) {
-                JsonArray array = new JsonArray(3);
-                array.add(obj.get("value"));
-                array.add(0);
-                array.add(0);
-                obj.add("vector", array);
+                obj.add("vector", scalarVector(obj.get("value"), type, true));
                 return ObjectArrayList.of(FloatObjectPair.of(0, obj));
             }
 
@@ -153,22 +279,18 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
 
                 JsonElement entryValue = entry.getValue();
                 if (entryValue.isJsonPrimitive()) {
-                    list.add(FloatObjectPair.of(timestamp, scalarBendVector(entryValue)));
+                    list.add(FloatObjectPair.of(timestamp, scalarVector(entryValue, type, false)));
                     continue;
                 }
 
                 if (entryValue.isJsonObject()) {
                     JsonObject entryObj = entryValue.getAsJsonObject();
                     if (entryObj.has("value")) {
-                        JsonArray array = new JsonArray(3);
-                        array.add(entryObj.get("value"));
-                        array.add(0);
-                        array.add(0);
-                        entryObj.add("vector", array);
+                        entryObj.add("vector", scalarVector(entryObj.get("value"), type, true));
                         list.add(FloatObjectPair.of(timestamp, entryObj));
                         continue;
                     } else if (!entryObj.has("vector")) {
-                        addBedrockKeyframes(timestamp, entryObj, list);
+                        addBedrockKeyframes(timestamp, entryObj, list, type);
                         continue;
                     }
                 }
@@ -183,13 +305,13 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         throw new JsonParseException("Invalid object type provided to vector bend keyframes, got: " + element);
     }
 
-    private static JsonArray extractBedrockKeyframe(JsonElement keyframe) {
+    private static JsonArray extractBedrockKeyframe(JsonElement keyframe, TransformType type) {
         if (keyframe.isJsonArray()) {
             return keyframe.getAsJsonArray();
         }
 
         if (keyframe.isJsonPrimitive()) {
-            return scalarBendVector(keyframe);
+            return scalarVector(keyframe, type, false);
         }
 
         if (!keyframe.isJsonObject()) {
@@ -206,20 +328,25 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         return keyframeObj.get("post").getAsJsonArray();
     }
 
-    private static JsonArray scalarBendVector(JsonElement value) {
+    private static JsonArray scalarVector(JsonElement value, TransformType type, boolean keyedValue) {
         JsonArray array = new JsonArray(3);
         array.add(value);
-        array.add(0);
-        array.add(0);
+        if (type == TransformType.BEND || keyedValue) {
+            array.add(0);
+            array.add(0);
+        } else {
+            array.add(value);
+            array.add(value);
+        }
         return array;
     }
 
-    private static void addBedrockKeyframes(float timestamp, JsonObject keyframe, List<FloatObjectPair<JsonElement>> keyframes) {
+    private static void addBedrockKeyframes(float timestamp, JsonObject keyframe, List<FloatObjectPair<JsonElement>> keyframes, TransformType type) {
         boolean addedFrame = false;
 
         if (keyframe.has("pre")) {
             addedFrame = true;
-            JsonArray value = extractBedrockKeyframe(keyframe.get("pre"));
+            JsonArray value = extractBedrockKeyframe(keyframe.get("pre"), type);
             JsonObject result = null;
             if (keyframe.has("easing")) {
                 result = new JsonObject();
@@ -234,7 +361,7 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         }
 
         if (keyframe.has("post")) {
-            JsonArray values = extractBedrockKeyframe(keyframe.get("post"));
+            JsonArray values = extractBedrockKeyframe(keyframe.get("post"), type);
 
             if (keyframe.has("lerp_mode")) {
                 JsonObject keyframeObj = new JsonObject();
@@ -410,6 +537,9 @@ public final class PalMoreBendResources implements ResourceManagerReloadListener
         if (keyframes.size() > 1) {
             keyframes.sort(Comparator.comparingDouble(FloatObjectPair::leftFloat));
         }
+    }
+
+    public record BendPartTracks(KeyframeStack bend, KeyframeStack position, KeyframeStack scale) {
     }
 
 }

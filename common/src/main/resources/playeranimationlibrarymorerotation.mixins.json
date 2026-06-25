@@ -9,6 +9,7 @@
     "AnimationControllerBendVectorMixin",
     "AnimationLoaderKeyframeSortMixin",
     "AvatarAnimManagerBendVectorResetMixin",
+    "ItemInHandLayerBendVectorMixin",
     "PlayerAnimBoneBendVectorMixin",
     "PlayerModelBendVectorMixin",
     "PlayerItemRotationFixMixin"

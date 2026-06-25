@@ -17,6 +17,7 @@ PAL 播放/停止/服务端同步 API。
 ## 功能
 
 - 为 PAL 的玩家骨骼 `bend` 增加 Y/Z 轴数据承载与渲染应用。
+- 为 bend 骨骼增加位移和尺寸支持，推荐写在真实玩家骨骼的 `bend.position` / `bend.scale` 下。
 - 保留旧动画的 X 轴 bend 行为，`bend: 35` 和 `bend: [35, 0, 0]` 继续可用。
 - 支持 JSON 中的 vector bend，例如 `bend: [x, y, z]`、`post: [x, y, z]`、`pre: [x, y, z]`。
 - 补充 `left_item` / `right_item` 手持物品骨骼的 Y/Z 旋转应用。
@@ -59,9 +60,11 @@ assets/mod_id/player_animations/animation.json
 mod_id:animation
 ```
 
-## bend XYZ JSON 格式
+## bend JSON 格式
 
-旧格式仍兼容：
+本库只支持真实玩家骨骼上的 `bend`。不要把 bend 变换写成额外的虚拟骨骼。
+
+支持的第一种写法：旧 scalar bend，等价于 `[x, 0, 0]`：
 
 ```json
 {
@@ -73,15 +76,16 @@ mod_id:animation
 }
 ```
 
-新的三轴格式：
+支持的第二种写法：三轴数组或旧时间轴对象。如果 `bend` 对象里没有
+`rotation`、`position`、`scale`，就默认当作 `rotation` 解析：
 
 ```json
 {
   "bones": {
-    "right_arm": {
+    "torso": {
       "bend": [35, 10, -15]
     },
-    "left_arm": {
+    "right_arm": {
       "bend": {
         "0.0": { "post": [0, 0, 0] },
         "0.5": { "post": [35, 20, -15] },
@@ -98,6 +102,43 @@ mod_id:animation
 - Y/Z bend 由本库 sidecar 数据保存，并在 bendable-cuboids 渲染路径中应用。
 - `{"value": 35}` 会按 `[35, 0, 0]` 处理。
 - bendable-cuboids 本身仍是单轴 bend API，本库的 Y/Z 是叠加在其 mesh 顶点上的兼容实现。
+
+## bend 骨骼位移和尺寸
+
+支持的第三种写法：把 bend 的三类通道放在同一个真实玩家骨骼下：
+
+```json
+{
+  "bones": {
+    "left_arm": {
+      "bend": {
+        "rotation": {
+          "0.0": { "post": [0, 0, 0] },
+          "0.5": { "post": [95, 60, -50] },
+          "1.0": { "post": [0, 0, 0] }
+        },
+        "position": {
+          "0.0": { "post": [0, 0, 0] },
+          "0.5": { "post": [2, 1, 0] },
+          "1.0": { "post": [0, 0, 0] }
+        },
+        "scale": {
+          "0.0": { "post": [1, 1, 1] },
+          "0.5": { "post": [1.25, 0.8, 1] },
+          "1.0": { "post": [1, 1, 1] }
+        }
+      }
+    }
+  }
+}
+```
+
+说明：
+
+- `position` 单位沿用 PAL / Minecraft 模型单位。
+- `scale` 是倍率，`1` 是原尺寸，不是 `0`。
+- `bend.position` 和 `bend.scale` 只修改 bend 下半段网格顶点，不会平移或缩放整条手臂、腿或身体关节。
+- 没有写 `bend.position` / `bend.scale` 的旧动画不受影响。
 
 ## 服务端播放 API
 
@@ -168,11 +209,10 @@ stop: Boolean
 
 ## 测试命令
 
-仓库内包含测试动画资源，可在客户端中使用 PAL 命令测试：
+下游项目把动画放到自己的 `assets/<namespace>/player_animations/` 后，可以在客户端中使用 PAL 命令测试：
 
 ```text
-/testPlayerAnimation mod_id:animation
-/testPlayerAnimation playeranimationlibrarymorerotation:item_rotation_yz_check
+/testPlayerAnimation <namespace>:<animation>
 ```
 
 ## 已知限制
@@ -180,6 +220,7 @@ stop: Boolean
 - Y/Z bend 是兼容层实现，不是 bendable-cuboids 官方三轴 ABI。
 - 旧的 PlayerAnimator 二进制/旧格式 bend 仍走 PAL 原生 X 轴行为。
 - begin/end tick 淡入淡出保留 PAL 的 X bend lerp，Y/Z 还没有独立 transition length。
+- `bend.position/scale` 是运行时兼容层能力，不会新增 PAL 普通玩家骨骼。
 
 ## 构建
 

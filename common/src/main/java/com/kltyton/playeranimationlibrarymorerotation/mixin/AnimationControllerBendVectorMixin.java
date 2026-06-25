@@ -2,6 +2,7 @@ package com.kltyton.playeranimationlibrarymorerotation.mixin;
 
 import com.kltyton.playeranimationlibrarymorerotation.client.compat.PalMoreBendResources;
 import com.kltyton.playeranimationlibrarymorerotation.compat.PalMoreBendHolder;
+import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.zigythebird.playeranimcore.animation.Animation;
 import com.zigythebird.playeranimcore.animation.AnimationController;
 import com.zigythebird.playeranimcore.animation.AnimationData;
@@ -13,7 +14,10 @@ import com.zigythebird.playeranimcore.bones.AdvancedPlayerAnimBone;
 import com.zigythebird.playeranimcore.bones.PivotBone;
 import com.zigythebird.playeranimcore.bones.PlayerAnimBone;
 import com.zigythebird.playeranimcore.easing.EasingType;
+import com.zigythebird.playeranimcore.enums.TransformType;
+import net.minecraft.resources.Identifier;
 import com.zigythebird.playeranimcore.molang.MolangLoader;
+import org.joml.Vector3f;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,18 +32,26 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Computes sidecar bend Y/Z values after PAL computes its native scalar bend X
- * value in AnimationController.processCurrentAnimation.
+ * Computes sidecar bend values plus bend-only position/scale transforms after
+ * PAL computes its native registered player bones in processCurrentAnimation.
  */
 @Mixin(AnimationController.class)
 public abstract class AnimationControllerBendVectorMixin {
     @Unique
     private static final KeyframeLocation PAL_MORE_EMPTY_KEYFRAME_LOCATION = new KeyframeLocation(new Keyframe(0), 0);
+    @Unique
+    private static final int PAL_MORE_DEBUG_PROCESS_LIMIT = 1000;
+    @Unique
+    private static int palMore$debugProcessLogs;
+    @Unique
+    private static int palMore$debugSkipLogs;
 
     @Shadow
     protected QueuedAnimation currentAnimation;
     @Shadow
     protected Map<String, AdvancedPlayerAnimBone> bones;
+    @Shadow
+    protected Map<String, PlayerAnimBone> activeBones;
     @Shadow
     protected Map<String, PivotBone> pivotBones;
     @Shadow
@@ -59,12 +71,10 @@ public abstract class AnimationControllerBendVectorMixin {
             return;
         }
 
-        Map<String, KeyframeStack> tracks = PalMoreBendResources.getBendTracks(currentAnimation.animation());
-        if (tracks.isEmpty()) {
-            return;
-        }
-
+        Animation animation = currentAnimation.animation();
+        Identifier animationId = PalMoreBendResources.getAnimationId(animation);
         EasingType easingOverride = overrideEasingTypeFunction.apply((AnimationController) (Object) this);
+        Map<String, KeyframeStack> tracks = PalMoreBendResources.getBendTracks(animation);
         for (Map.Entry<String, KeyframeStack> entry : tracks.entrySet()) {
             PlayerAnimBone bone = bones.get(entry.getKey());
             if (bone == null) {
@@ -81,10 +91,82 @@ public abstract class AnimationControllerBendVectorMixin {
             holder.palMore$setBend(bone.bend, bendY, bendZ);
             holder.palMore$setBendVectorOverride(true);
         }
+
+        Map<String, PalMoreBendResources.BendPartTracks> partTracks = PalMoreBendResources.getBendPartTracks(animation);
+        for (Map.Entry<String, PalMoreBendResources.BendPartTracks> entry : partTracks.entrySet()) {
+            PlayerAnimBone bone = bones.get(entry.getKey());
+            if (bone == null) {
+                bone = pivotBones.get(entry.getKey());
+            }
+            if (bone == null || !(bone instanceof PalMoreBendHolder holder)) {
+                if (PalMoreDebug.shouldLog(animationId) && palMore$debugSkipLogs < 80) {
+                    palMore$debugSkipLogs++;
+                    PalMoreDebug.info("skip id={} target={} reason={} bones={} pivots={}",
+                            animationId,
+                            entry.getKey(),
+                            bone == null ? "missing target bone" : "target does not implement PalMoreBendHolder",
+                            bones.keySet(),
+                            pivotBones.keySet());
+                }
+                continue;
+            }
+
+            activeBones.put(entry.getKey(), bone);
+            PalMoreBendResources.BendPartTracks bendPartTracks = entry.getValue();
+            KeyframeStack bendStack = bendPartTracks.bend();
+            if (bendStack.hasKeyframes()) {
+                float bendX = palMore$computeAnimValue(bendStack.xKeyframes(), adjustedTick, TransformType.BEND, easingOverride, bone.bend);
+                float bendY = palMore$computeAnimValue(bendStack.yKeyframes(), adjustedTick, TransformType.BEND, easingOverride, 0.0F);
+                float bendZ = palMore$computeAnimValue(bendStack.zKeyframes(), adjustedTick, TransformType.BEND, easingOverride, 0.0F);
+                holder.palMore$setBend(bendX, bendY, bendZ);
+                holder.palMore$setBendVectorOverride(true);
+            }
+
+            KeyframeStack positionStack = bendPartTracks.position();
+            KeyframeStack scaleStack = bendPartTracks.scale();
+            if (positionStack.hasKeyframes() || scaleStack.hasKeyframes()) {
+                Vector3f position = new Vector3f(
+                        palMore$computeAnimValue(positionStack.xKeyframes(), adjustedTick, TransformType.POSITION, easingOverride, 0.0F),
+                        palMore$computeAnimValue(positionStack.yKeyframes(), adjustedTick, TransformType.POSITION, easingOverride, 0.0F),
+                        palMore$computeAnimValue(positionStack.zKeyframes(), adjustedTick, TransformType.POSITION, easingOverride, 0.0F)
+                );
+                Vector3f scale = new Vector3f(
+                        palMore$computeAnimValue(scaleStack.xKeyframes(), adjustedTick, TransformType.SCALE, easingOverride, 1.0F),
+                        palMore$computeAnimValue(scaleStack.yKeyframes(), adjustedTick, TransformType.SCALE, easingOverride, 1.0F),
+                        palMore$computeAnimValue(scaleStack.zKeyframes(), adjustedTick, TransformType.SCALE, easingOverride, 1.0F)
+                );
+                holder.palMore$setBendTransform(position.x, position.y, position.z, scale.x, scale.y, scale.z);
+                holder.palMore$setBendTransformOverride(true);
+                if (PalMoreDebug.shouldLog(animationId) && palMore$debugProcessLogs < PAL_MORE_DEBUG_PROCESS_LIMIT) {
+                    palMore$debugProcessLogs++;
+                    PalMoreDebug.info("process id={} target={} tick={} pos=({}, {}, {}) scale=({}, {}, {}) active={} boneClass={}",
+                            animationId,
+                            entry.getKey(),
+                            adjustedTick,
+                            position.x,
+                            position.y,
+                            position.z,
+                            scale.x,
+                            scale.y,
+                            scale.z,
+                            activeBones.containsKey(entry.getKey()),
+                            bone.getClass().getName());
+                }
+            }
+        }
     }
 
     @Unique
     private float palMore$computeVectorBendValue(List<Keyframe> frames, float tick, @Nullable EasingType easingOverride) {
+        return palMore$computeAnimValue(frames, tick, TransformType.BEND, easingOverride, 0.0F);
+    }
+
+    @Unique
+    private float palMore$computeAnimValue(List<Keyframe> frames, float tick, TransformType type, @Nullable EasingType easingOverride, float defaultValue) {
+        if (frames.isEmpty()) {
+            return defaultValue;
+        }
+
         Animation animation = currentAnimation.animation();
         KeyframeLocation location = palMore$getCurrentKeyFrameLocation(
                 frames,
@@ -97,11 +179,13 @@ public abstract class AnimationControllerBendVectorMixin {
         float startValue = molangRuntime.eval(currentFrame.startValue());
         float endValue = molangRuntime.eval(currentFrame.endValue());
 
-        if (!MolangLoader.isConstant(currentFrame.startValue())) {
-            startValue = (float) Math.toRadians(startValue);
-        }
-        if (!MolangLoader.isConstant(currentFrame.endValue())) {
-            endValue = (float) Math.toRadians(endValue);
+        if (type == TransformType.ROTATION || type == TransformType.BEND) {
+            if (!MolangLoader.isConstant(currentFrame.startValue())) {
+                startValue = (float) Math.toRadians(startValue);
+            }
+            if (!MolangLoader.isConstant(currentFrame.endValue())) {
+                endValue = (float) Math.toRadians(endValue);
+            }
         }
 
         float lerpValue = currentFrame.length() > 0 ? location.startTick() / currentFrame.length() : 0;

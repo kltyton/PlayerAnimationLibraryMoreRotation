@@ -17,6 +17,8 @@ small reusable PAL playback/sync API for downstream mods.
 ## Features
 
 - Adds Y/Z data storage and rendering support for PAL player bone `bend`.
+- Adds position and scale support for bend bones, preferably through
+  `bend.position` / `bend.scale` on the real player bone.
 - Keeps old X-only bend behavior compatible. `bend: 35` and `bend: [35, 0, 0]`
   still work.
 - Supports vector bend JSON such as `bend: [x, y, z]`, `post: [x, y, z]`, and
@@ -62,9 +64,12 @@ uses this animation id:
 mob_battle:poison_knife_animation
 ```
 
-## bend XYZ JSON Format
+## bend JSON Format
 
-Legacy format remains compatible:
+This library only supports `bend` on real player bones. Do not write bend
+transforms as extra virtual bones.
+
+Supported form 1: legacy scalar bend, equivalent to `[x, 0, 0]`:
 
 ```json
 {
@@ -76,15 +81,17 @@ Legacy format remains compatible:
 }
 ```
 
-New vector format:
+Supported form 2: three-axis array or legacy timeline object. If a `bend`
+object has no `rotation`, `position`, or `scale` member, it is treated as the
+rotation track:
 
 ```json
 {
   "bones": {
-    "right_arm": {
+    "torso": {
       "bend": [35, 10, -15]
     },
-    "left_arm": {
+    "right_arm": {
       "bend": {
         "0.0": { "post": [0, 0, 0] },
         "0.5": { "post": [35, 20, -15] },
@@ -103,6 +110,48 @@ Notes:
 - `{"value": 35}` is treated as `[35, 0, 0]`.
 - bendable-cuboids itself still exposes a single-axis bend API. This library
   layers Y/Z bend as a compatibility mesh transform.
+
+## Bend Bone Position And Scale
+
+Supported form 3: bend channels under the same real player bone:
+
+```json
+{
+  "bones": {
+    "left_arm": {
+      "bend": {
+        "rotation": {
+          "0.0": { "post": [0, 0, 0] },
+          "0.5": { "post": [95, 60, -50] },
+          "1.0": { "post": [0, 0, 0] }
+        },
+        "position": {
+          "0.0": { "post": [0, 0, 0] },
+          "0.5": { "post": [-10, 6, 0] },
+          "1.0": { "post": [0, 0, 0] }
+        },
+        "scale": {
+          "0.0": { "post": [1, 1, 1] },
+          "0.5": { "post": [0.35, 2.7, 0.55] },
+          "1.0": { "post": [1, 1, 1] }
+        }
+      }
+    }
+  }
+}
+```
+
+`bend.rotation` is the same vector bend channel as the old `bend` timeline.
+`bend.position` / `bend.scale` apply to the same rendered body part. `post`,
+`pre`, `vector`, and `{"value": ...}` keyframes are supported.
+
+Notes:
+
+- `position` uses the same model units as PAL / Minecraft model parts.
+- `scale` is a multiplier. `1` means original size, not zero.
+- `bend.position` and `bend.scale` modify only the lower bend-segment mesh
+  vertices; they do not move or resize the whole arm, leg, body part, or joint.
+- Existing animations without `bend.position` / `bend.scale` are unchanged.
 
 ## Server Playback API
 
@@ -172,14 +221,14 @@ Downstream mods do not need to register this payload or receiver again.
 - NeoForge mod entrypoint:
   `com.kltyton.playeranimationlibrarymorerotation.neoforge.PlayeranimationlibrarymorerotationNeoForge`
 
-## Test Commands
+## Test Command
 
-This repository includes test animation resources. In a client world, use PAL's
-command:
+After a downstream mod places animations under its own
+`assets/<namespace>/player_animations/` directory, use PAL's command in a
+client world:
 
 ```text
-/testPlayerAnimation mob_battle:poison_knife_animation
-/testPlayerAnimation playeranimationlibrarymorerotation:item_rotation_yz_check
+/testPlayerAnimation <namespace>:<animation>
 ```
 
 ## Known Limitations
@@ -190,6 +239,8 @@ command:
   behavior.
 - begin/end tick fade keeps PAL's native X bend lerp; Y/Z do not yet have
   separate transition lengths.
+- `bend.position/scale` is a runtime compatibility feature and does not
+  register extra normal PAL player bones.
 
 ## Build
 

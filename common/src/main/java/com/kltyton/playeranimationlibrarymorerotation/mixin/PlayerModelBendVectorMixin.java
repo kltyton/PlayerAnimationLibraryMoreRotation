@@ -17,8 +17,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Applies sidecar bend Y/Z values to bendable-cuboids player model parts after
- * bendable-cuboids' PlayerModelMixin_playerAnim handler has applied native X bend.
+ * Applies sidecar bend Y/Z values and bend-only position/scale mesh transforms
+ * to bendable-cuboids player model parts after its playeranim handler has
+ * applied native X bend.
  */
 @Mixin(value = PlayerModel.class, priority = 2500)
 public abstract class PlayerModelBendVectorMixin extends HumanoidModel<AvatarRenderState> {

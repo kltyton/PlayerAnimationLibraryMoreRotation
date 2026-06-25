@@ -1,7 +1,5 @@
 package com.kltyton.playeranimationlibrarymorerotation.mixin;
 
-import com.bawnorton.mixinsquared.TargetHandler;
-import com.llamalad7.mixinextras.sugar.ref.LocalBooleanRef;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.zigythebird.playeranim.accessors.IAvatarAnimationState;
@@ -20,10 +18,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Reapplies left_item/right_item Y/Z rotations after PAL's item handler, using
- * Mixinsquared because the target method is introduced by PAL's own mixin.
+ * Reapplies left_item/right_item Y/Z rotations at PAL's original item render
+ * injection point without depending on PAL's mixin-added handler locals.
  */
-@Mixin(value = ItemInHandLayer.class, priority = 1500)
+@Mixin(value = ItemInHandLayer.class, priority = 500)
 public class PlayerItemRotationFixMixin {
     private static final float MIN_INVERTIBLE_SCALE = 1.0e-6F;
 
@@ -31,13 +29,13 @@ public class PlayerItemRotationFixMixin {
     private final PlayerAnimBone palMore$rightItem = new PlayerAnimBone("right_item");
     @Unique
     private final PlayerAnimBone palMore$leftItem = new PlayerAnimBone("left_item");
-
-    @TargetHandler(
-            mixin = "com.zigythebird.playeranim.mixin.ItemInHandLayerMixin",
-            name = "changeItemRotationAndScale",
-            prefix = "handler"
+    @Inject(
+            method = "submitArmWithItem",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;III)V"
+            )
     )
-    @Inject(method = "@MixinSquared:Handler", at = @At("RETURN"), remap = false)
     private void palMore$fixItemRotation(
             ArmedEntityRenderState renderState,
             ItemStackRenderState itemStackRenderState,
@@ -46,14 +44,8 @@ public class PlayerItemRotationFixMixin {
             PoseStack poseStack,
             SubmitNodeCollector submitNodeCollector,
             int packedLight,
-            CallbackInfo originalCi,
-            LocalBooleanRef active,
             CallbackInfo ci
     ) {
-        if (!active.get()) {
-            return;
-        }
-
         if (!(renderState instanceof IAvatarAnimationState state)) {
             return;
         }

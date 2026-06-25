@@ -20,6 +20,8 @@ public class AvatarAnimManagerBendVectorResetMixin {
         if (bone instanceof PalMoreBendHolder holder) {
             holder.palMore$setBend(bone.bend, 0.0F, 0.0F);
             holder.palMore$setBendVectorOverride(false);
+            holder.palMore$setBendTransform(0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F);
+            holder.palMore$setBendTransformOverride(false);
         }
     }
 }

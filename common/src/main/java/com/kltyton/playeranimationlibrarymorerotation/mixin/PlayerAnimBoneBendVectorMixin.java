@@ -1,6 +1,7 @@
 package com.kltyton.playeranimationlibrarymorerotation.mixin;
 
 import com.kltyton.playeranimationlibrarymorerotation.compat.PalMoreBendHolder;
+import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.zigythebird.playeranimcore.animation.Animation;
 import com.zigythebird.playeranimcore.bones.AdvancedPlayerAnimBone;
 import com.zigythebird.playeranimcore.bones.PlayerAnimBone;
@@ -26,6 +27,22 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
     private float palMore$bendZ;
     @Unique
     private boolean palMore$bendVectorOverride;
+    @Unique
+    private float palMore$bendPositionX;
+    @Unique
+    private float palMore$bendPositionY;
+    @Unique
+    private float palMore$bendPositionZ;
+    @Unique
+    private float palMore$bendScaleX = 1.0F;
+    @Unique
+    private float palMore$bendScaleY = 1.0F;
+    @Unique
+    private float palMore$bendScaleZ = 1.0F;
+    @Unique
+    private boolean palMore$bendTransformOverride;
+    @Unique
+    private static int palMore$debugCopyLogs;
 
     @Override
     public float palMore$getBendX() {
@@ -59,15 +76,67 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
         palMore$bendVectorOverride = active;
     }
 
+    @Override
+    public void palMore$setBendTransform(float positionX, float positionY, float positionZ, float scaleX, float scaleY, float scaleZ) {
+        palMore$bendPositionX = positionX;
+        palMore$bendPositionY = positionY;
+        palMore$bendPositionZ = positionZ;
+        palMore$bendScaleX = scaleX;
+        palMore$bendScaleY = scaleY;
+        palMore$bendScaleZ = scaleZ;
+    }
+
+    @Override
+    public float palMore$getBendPositionX() {
+        return palMore$bendPositionX;
+    }
+
+    @Override
+    public float palMore$getBendPositionY() {
+        return palMore$bendPositionY;
+    }
+
+    @Override
+    public float palMore$getBendPositionZ() {
+        return palMore$bendPositionZ;
+    }
+
+    @Override
+    public float palMore$getBendScaleX() {
+        return palMore$bendScaleX;
+    }
+
+    @Override
+    public float palMore$getBendScaleY() {
+        return palMore$bendScaleY;
+    }
+
+    @Override
+    public float palMore$getBendScaleZ() {
+        return palMore$bendScaleZ;
+    }
+
+    @Override
+    public boolean palMore$hasBendTransformOverride() {
+        return palMore$bendTransformOverride;
+    }
+
+    @Override
+    public void palMore$setBendTransformOverride(boolean active) {
+        palMore$bendTransformOverride = active;
+    }
+
     @Inject(method = "<init>(Lcom/zigythebird/playeranimcore/bones/PlayerAnimBone;)V", at = @At("RETURN"))
     private void palMore$copyVectorBendFromCtor(PlayerAnimBone bone, CallbackInfo ci) {
         palMore$copyVectorBend(bone);
+        palMore$copyBendTransform(bone);
     }
 
     @Inject(method = "setToInitialPose", at = @At("RETURN"))
     private void palMore$resetVectorBend(CallbackInfo ci) {
         palMore$setBend(0.0F, 0.0F, 0.0F);
         palMore$setBendVectorOverride(false);
+        palMore$resetBendTransform();
     }
 
     @Inject(method = "scale", at = @At("RETURN"))
@@ -75,6 +144,9 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
         palMore$bendX *= value;
         palMore$bendY *= value;
         palMore$bendZ *= value;
+        palMore$bendPositionX *= value;
+        palMore$bendPositionY *= value;
+        palMore$bendPositionZ *= value;
     }
 
     @Inject(method = "add", at = @At("RETURN"))
@@ -87,6 +159,15 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
         } else {
             palMore$bendX += bone.bend;
         }
+        if (bone instanceof PalMoreBendHolder holder && holder.palMore$hasBendTransformOverride()) {
+            palMore$bendPositionX += holder.palMore$getBendPositionX();
+            palMore$bendPositionY += holder.palMore$getBendPositionY();
+            palMore$bendPositionZ += holder.palMore$getBendPositionZ();
+            palMore$bendScaleX *= holder.palMore$getBendScaleX();
+            palMore$bendScaleY *= holder.palMore$getBendScaleY();
+            palMore$bendScaleZ *= holder.palMore$getBendScaleZ();
+            palMore$setBendTransformOverride(true);
+        }
     }
 
     @Inject(method = "applyOtherBone", at = @At("RETURN"))
@@ -97,24 +178,25 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
     @Inject(method = "copyOtherBone", at = @At("RETURN"))
     private void palMore$copyVectorBend(PlayerAnimBone bone, CallbackInfoReturnable<PlayerAnimBone> cir) {
         palMore$copyVectorBend(bone);
+        palMore$copyBendTransform(bone);
     }
 
     @Inject(method = "copyOtherBoneIfNotDisabled", at = @At("RETURN"))
     private void palMore$copyVectorBendIfEnabled(PlayerAnimBone bone, CallbackInfoReturnable<PlayerAnimBone> cir) {
-        if (bone instanceof ToggleablePlayerAnimBone toggleableBone && !toggleableBone.isBendEnabled()) {
-            return;
+        if (!(bone instanceof ToggleablePlayerAnimBone toggleableBone) || toggleableBone.isBendEnabled()) {
+            palMore$copyVectorBend(bone);
         }
 
-        palMore$copyVectorBend(bone);
+        palMore$copyBendTransform(bone);
     }
 
     @Inject(method = "beginOrEndTickLerp", at = @At("RETURN"))
     private void palMore$copyVectorBendDuringTickLerp(AdvancedPlayerAnimBone bone, float animTime, Animation animation, CallbackInfo ci) {
-        if (!bone.isBendEnabled()) {
-            return;
+        if (bone.isBendEnabled()) {
+            palMore$copyVectorBend(bone, ((PlayerAnimBone) (Object) this).bend);
         }
 
-        palMore$copyVectorBend(bone, ((PlayerAnimBone) (Object) this).bend);
+        palMore$copyBendTransform(bone);
     }
 
     @Unique
@@ -131,5 +213,42 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
             palMore$setBend(bendX, 0.0F, 0.0F);
             palMore$setBendVectorOverride(false);
         }
+    }
+
+    @Unique
+    private void palMore$copyBendTransform(PlayerAnimBone bone) {
+        if (bone instanceof PalMoreBendHolder holder && holder.palMore$hasBendTransformOverride()) {
+            palMore$setBendTransform(
+                    holder.palMore$getBendPositionX(),
+                    holder.palMore$getBendPositionY(),
+                    holder.palMore$getBendPositionZ(),
+                    holder.palMore$getBendScaleX(),
+                    holder.palMore$getBendScaleY(),
+                    holder.palMore$getBendScaleZ()
+            );
+            palMore$setBendTransformOverride(true);
+            if (PalMoreDebug.BEND_DEBUG && palMore$debugCopyLogs < 120) {
+                palMore$debugCopyLogs++;
+                PlayerAnimBone self = (PlayerAnimBone) (Object) this;
+                PalMoreDebug.info("copy target={} from={} pos=({}, {}, {}) scale=({}, {}, {}) sourceClass={}",
+                        self.getName(),
+                        bone.getName(),
+                        holder.palMore$getBendPositionX(),
+                        holder.palMore$getBendPositionY(),
+                        holder.palMore$getBendPositionZ(),
+                        holder.palMore$getBendScaleX(),
+                        holder.palMore$getBendScaleY(),
+                        holder.palMore$getBendScaleZ(),
+                        bone.getClass().getName());
+            }
+        } else {
+            palMore$resetBendTransform();
+        }
+    }
+
+    @Unique
+    private void palMore$resetBendTransform() {
+        palMore$setBendTransform(0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F);
+        palMore$setBendTransformOverride(false);
     }
 }
