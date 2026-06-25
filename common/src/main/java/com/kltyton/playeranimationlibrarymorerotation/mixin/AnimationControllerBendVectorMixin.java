@@ -19,6 +19,7 @@ import net.minecraft.resources.Identifier;
 import com.zigythebird.playeranimcore.molang.MolangLoader;
 import org.joml.Vector3f;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -39,21 +40,19 @@ import java.util.function.Function;
 public abstract class AnimationControllerBendVectorMixin {
     @Unique
     private static final KeyframeLocation PAL_MORE_EMPTY_KEYFRAME_LOCATION = new KeyframeLocation(new Keyframe(0), 0);
-    @Unique
-    private static final int PAL_MORE_DEBUG_PROCESS_LIMIT = 1000;
-    @Unique
-    private static int palMore$debugProcessLogs;
-    @Unique
-    private static int palMore$debugSkipLogs;
 
     @Shadow
     protected QueuedAnimation currentAnimation;
+    @Final
     @Shadow
     protected Map<String, AdvancedPlayerAnimBone> bones;
+    @Final
     @Shadow
     protected Map<String, PlayerAnimBone> activeBones;
+    @Final
     @Shadow
     protected Map<String, PivotBone> pivotBones;
+    @Final
     @Shadow
     protected MochaEngine<AnimationController> molangRuntime;
     @Shadow
@@ -90,6 +89,20 @@ public abstract class AnimationControllerBendVectorMixin {
             PalMoreBendHolder holder = (PalMoreBendHolder) bone;
             holder.palMore$setBend(bone.bend, bendY, bendZ);
             holder.palMore$setBendVectorOverride(true);
+            if (PalMoreDebug.shouldLog(animationId)) {
+                PalMoreDebug.verboseLimited(PalMoreDebug.FRAME,
+                        "vector id={} target={} tick={} nativeBendX={} bendY={} bendZ={} yFrames={} zFrames={} easingOverride={} boneClass={}",
+                        animationId,
+                        entry.getKey(),
+                        adjustedTick,
+                        bone.bend,
+                        bendY,
+                        bendZ,
+                        stack.yKeyframes().size(),
+                        stack.zKeyframes().size(),
+                        easingOverride,
+                        bone.getClass().getName());
+            }
         }
 
         Map<String, PalMoreBendResources.BendPartTracks> partTracks = PalMoreBendResources.getBendPartTracks(animation);
@@ -98,10 +111,10 @@ public abstract class AnimationControllerBendVectorMixin {
             if (bone == null) {
                 bone = pivotBones.get(entry.getKey());
             }
-            if (bone == null || !(bone instanceof PalMoreBendHolder holder)) {
-                if (PalMoreDebug.shouldLog(animationId) && palMore$debugSkipLogs < 80) {
-                    palMore$debugSkipLogs++;
-                    PalMoreDebug.info("skip id={} target={} reason={} bones={} pivots={}",
+            if (!(bone instanceof PalMoreBendHolder holder)) {
+                if (PalMoreDebug.shouldLog(animationId)) {
+                    PalMoreDebug.infoLimited(PalMoreDebug.FRAME,
+                            "skip id={} target={} reason={} bones={} pivots={}",
                             animationId,
                             entry.getKey(),
                             bone == null ? "missing target bone" : "target does not implement PalMoreBendHolder",
@@ -120,6 +133,22 @@ public abstract class AnimationControllerBendVectorMixin {
                 float bendZ = palMore$computeAnimValue(bendStack.zKeyframes(), adjustedTick, TransformType.BEND, easingOverride, 0.0F);
                 holder.palMore$setBend(bendX, bendY, bendZ);
                 holder.palMore$setBendVectorOverride(true);
+                if (PalMoreDebug.shouldLog(animationId)) {
+                    PalMoreDebug.infoLimited(PalMoreDebug.FRAME,
+                            "bend id={} target={} tick={} bend=({}, {}, {}) frames=({}, {}, {}) easingOverride={} active={} boneClass={}",
+                            animationId,
+                            entry.getKey(),
+                            adjustedTick,
+                            bendX,
+                            bendY,
+                            bendZ,
+                            bendStack.xKeyframes().size(),
+                            bendStack.yKeyframes().size(),
+                            bendStack.zKeyframes().size(),
+                            easingOverride,
+                            activeBones.containsKey(entry.getKey()),
+                            bone.getClass().getName());
+                }
             }
 
             KeyframeStack positionStack = bendPartTracks.position();
@@ -137,9 +166,9 @@ public abstract class AnimationControllerBendVectorMixin {
                 );
                 holder.palMore$setBendTransform(position.x, position.y, position.z, scale.x, scale.y, scale.z);
                 holder.palMore$setBendTransformOverride(true);
-                if (PalMoreDebug.shouldLog(animationId) && palMore$debugProcessLogs < PAL_MORE_DEBUG_PROCESS_LIMIT) {
-                    palMore$debugProcessLogs++;
-                    PalMoreDebug.info("process id={} target={} tick={} pos=({}, {}, {}) scale=({}, {}, {}) active={} boneClass={}",
+                if (PalMoreDebug.shouldLog(animationId)) {
+                    PalMoreDebug.infoLimited(PalMoreDebug.FRAME,
+                            "transform id={} target={} tick={} pos=({}, {}, {}) scale=({}, {}, {}) posFrames=({}, {}, {}) scaleFrames=({}, {}, {}) easingOverride={} active={} boneClass={}",
                             animationId,
                             entry.getKey(),
                             adjustedTick,
@@ -149,6 +178,13 @@ public abstract class AnimationControllerBendVectorMixin {
                             scale.x,
                             scale.y,
                             scale.z,
+                            positionStack.xKeyframes().size(),
+                            positionStack.yKeyframes().size(),
+                            positionStack.zKeyframes().size(),
+                            scaleStack.xKeyframes().size(),
+                            scaleStack.yKeyframes().size(),
+                            scaleStack.zKeyframes().size(),
+                            easingOverride,
                             activeBones.containsKey(entry.getKey()),
                             bone.getClass().getName());
                 }

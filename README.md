@@ -12,6 +12,7 @@ PAL 播放/停止/服务端同步 API。
 - NeoForge: `26.1.2.76`
 - Player Animation Library Fabric / Neo: `1.2.4+mc.26.1`
 - bendable-cuboids: `2.0.2`
+- Forge Config API Port: `26.1.5`（Fabric）
 - Java: `25`
 
 ## 功能
@@ -197,6 +198,37 @@ stop: Boolean
 ```
 
 下游模组不需要重复注册这个 payload 或客户端 receiver。
+
+## 调试日志
+
+调试日志默认关闭。首次启动客户端后，可在客户端配置文件里启用：
+
+```text
+config/playeranimationlibrarymorerotation-client.toml
+```
+
+常用配置：
+
+```toml
+[debug]
+enabled = true
+verbose = true
+logAllAnimations = false
+animationFilter = "playeranimationlibrarymorerotation,poison_knife"
+resourceLogLimit = 160
+frameLogLimit = 2000
+copyLogLimit = 400
+renderLogLimit = 1000
+itemLogLimit = 1000
+```
+
+说明：
+
+- `enabled` 控制全部 PALMore 调试日志。
+- `verbose` 会输出资源解析、逐帧计算、渲染和手持物品跟随的更细信息。
+- `animationFilter` 用逗号分隔，可填写 namespace、路径或完整动画 ID 的一部分。
+- `logAllAnimations = true` 会记录所有动画，日志量会很大。
+- 日志前缀为 `[PalMore/BendDebug/<category>]`，常见 category 有 `resource`、`frame`、`copy`、`render`、`item`。
 
 ## 初始化入口
 

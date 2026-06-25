@@ -41,8 +41,6 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
     private float palMore$bendScaleZ = 1.0F;
     @Unique
     private boolean palMore$bendTransformOverride;
-    @Unique
-    private static int palMore$debugCopyLogs;
 
     @Override
     public float palMore$getBendX() {
@@ -227,12 +225,15 @@ public class PlayerAnimBoneBendVectorMixin implements PalMoreBendHolder {
                     holder.palMore$getBendScaleZ()
             );
             palMore$setBendTransformOverride(true);
-            if (PalMoreDebug.BEND_DEBUG && palMore$debugCopyLogs < 120) {
-                palMore$debugCopyLogs++;
+            if (PalMoreDebug.enabled()) {
                 PlayerAnimBone self = (PlayerAnimBone) (Object) this;
-                PalMoreDebug.info("copy target={} from={} pos=({}, {}, {}) scale=({}, {}, {}) sourceClass={}",
+                PalMoreDebug.infoLimited(PalMoreDebug.COPY,
+                        "copy target={} from={} bend=({}, {}, {}) pos=({}, {}, {}) scale=({}, {}, {}) sourceClass={}",
                         self.getName(),
                         bone.getName(),
+                        holder.palMore$getBendX(),
+                        holder.palMore$getBendY(),
+                        holder.palMore$getBendZ(),
                         holder.palMore$getBendPositionX(),
                         holder.palMore$getBendPositionY(),
                         holder.palMore$getBendPositionZ(),

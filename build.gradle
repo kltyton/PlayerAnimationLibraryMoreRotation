@@ -34,5 +34,9 @@ allprojects {
             name = "EnjaraiMirror"
             url = "https://maven.enjarai.dev/mirrors"
         }
+        maven {
+            name = "Fuzs Mod Resources"
+            url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
+        }
     }
 }

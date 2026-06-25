@@ -1,6 +1,7 @@
 package com.kltyton.playeranimationlibrarymorerotation.client.compat;
 
 import com.kltyton.playeranimationlibrarymorerotation.compat.PalMoreBendHolder;
+import com.kltyton.playeranimationlibrarymorerotation.util.PalMoreDebug;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.zigythebird.bendable_cuboids.api.BendableCube;
@@ -33,73 +34,22 @@ public final class PalMoreBendableCuboids {
             return;
         }
 
-        if (!((Object) part instanceof BendableModelPart bendablePart)) {
-            LAST_VECTOR_BEND.remove(part);
-            return;
-        }
-
-        BendableCube cube = bendablePart.bc$getCuboid(0);
-        if (!(cube instanceof ModelPart.Cube modelCube)) {
-            LAST_VECTOR_BEND.remove(part);
-            return;
-        }
-
-        if (isZero(bendY) && isZero(bendZ) && !hasTransform) {
-            applyNativeBendDirect(cube, bendX);
-            LAST_VECTOR_BEND.remove(part);
-            return;
-        }
-
-        if (!(cube instanceof BendableCuboid cuboid)) {
-            cube.applyBend(bendX);
-            LAST_VECTOR_BEND.remove(part);
-            return;
-        }
-
-        Function<Vector3f, Vector3f> nativeX = BendUtil.getBend(cube, bendX);
-        float pivotX = cube.getBendX();
-        float pivotZ = cube.getBendZ();
-        float minY = Math.min(modelCube.minY, modelCube.maxY);
-        float maxY = Math.max(modelCube.minY, modelCube.maxY);
-        float height = Math.max(EPSILON, maxY - minY);
-        float hingeY = minY + height * 0.5F;
-        boolean inverted = cube.isBendInverted();
-        float signedBendY = inverted ? -bendY : bendY;
-        float signedBendZ = inverted ? -bendZ : bendZ;
-
-        cuboid.iteratePositions(original -> {
-            Vector3f result = nativeX.apply(new Vector3f(original));
-            float lowerSegmentFactor = bendLowerSegmentFactor(original.y, hingeY, height);
-            if (!isZero(signedBendY)) {
-                rotateY(result, pivotX, hingeY, pivotZ, signedBendY * lowerSegmentFactor);
-            }
-            if (!isZero(signedBendZ)) {
-                rotateZ(result, pivotX, hingeY, pivotZ, signedBendZ * lowerSegmentFactor);
-            }
-            if (hasTransform) {
-                applyBendOnlyTransform(result, lowerSegmentFactor, pivotX, hingeY, pivotZ, bend);
-            }
-            return result;
-        });
-
-        LAST_VECTOR_BEND.put(part, new BendVectorState(
+        PalMoreDebug.verboseLimited(PalMoreDebug.RENDER,
+                "skip part={} reason=not BendableModelPart bend=({}, {}, {}) transformActive={}",
+                System.identityHashCode(part),
                 bendX,
                 bendY,
                 bendZ,
-                bend.palMore$getBendPositionX(),
-                bend.palMore$getBendPositionY(),
-                bend.palMore$getBendPositionZ(),
-                bend.palMore$getBendScaleX(),
-                bend.palMore$getBendScaleY(),
-                bend.palMore$getBendScaleZ()
-        ));
+                hasTransform);
+        LAST_VECTOR_BEND.remove(part);
+
     }
 
     public static void clearPartState(ModelPart part) {
         LAST_VECTOR_BEND.remove(part);
     }
 
-    public static void applyArmItemBend(PoseStack poseStack, PalMoreBendHolder bend) {
+    public static void applyArmItemBend(PoseStack poseStack, PalMoreBendHolder bend, String context) {
         float bendX = bend.palMore$getBendX();
         boolean hasBendY = !isZero(bend.palMore$getBendY());
         boolean hasBendZ = !isZero(bend.palMore$getBendZ());
@@ -109,6 +59,22 @@ public final class PalMoreBendableCuboids {
         }
 
         float pivotY = 0.25F;
+        PalMoreDebug.infoLimited(PalMoreDebug.ITEM,
+                "apply arm item bend context={} bend=({}, {}, {}) hasY={} hasZ={} pos=({}, {}, {}) scale=({}, {}, {}) hasTransform={} pivotY={}",
+                context,
+                bendX,
+                bend.palMore$getBendY(),
+                bend.palMore$getBendZ(),
+                hasBendY,
+                hasBendZ,
+                bend.palMore$getBendPositionX(),
+                bend.palMore$getBendPositionY(),
+                bend.palMore$getBendPositionZ(),
+                bend.palMore$getBendScaleX(),
+                bend.palMore$getBendScaleY(),
+                bend.palMore$getBendScaleZ(),
+                hasTransform,
+                pivotY);
         if (!isZero(bendX)) {
             poseStack.translate(0.0F, pivotY, 0.0F);
             poseStack.mulPose(Axis.XP.rotation(-bendX));

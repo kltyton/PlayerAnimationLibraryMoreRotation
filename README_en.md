@@ -12,6 +12,7 @@ small reusable PAL playback/sync API for downstream mods.
 - NeoForge: `26.1.2.76`
 - Player Animation Library Fabric / Neo: `1.2.4+mc.26.1`
 - bendable-cuboids: `2.0.2`
+- Forge Config API Port: `26.1.5` (Fabric)
 - Java: `25`
 
 ## Features
@@ -211,6 +212,38 @@ stop: Boolean
 ```
 
 Downstream mods do not need to register this payload or receiver again.
+
+## Debug Logging
+
+Debug logging is disabled by default. After the first client launch, enable it
+in the client config file:
+
+```text
+config/playeranimationlibrarymorerotation-client.toml
+```
+
+Common settings:
+
+```toml
+[debug]
+enabled = true
+verbose = true
+logAllAnimations = false
+animationFilter = "playeranimationlibrarymorerotation,poison_knife"
+resourceLogLimit = 160
+frameLogLimit = 2000
+copyLogLimit = 400
+renderLogLimit = 1000
+itemLogLimit = 1000
+```
+
+Notes:
+
+- `enabled` controls all PALMore debug logging.
+- `verbose` adds parser, per-frame, render, and held-item follow details.
+- `animationFilter` is a comma-separated namespace, path, or full animation id substring list.
+- `logAllAnimations = true` records every animation and can produce a lot of output.
+- Log lines use the `[PalMore/BendDebug/<category>]` prefix. Common categories are `resource`, `frame`, `copy`, `render`, and `item`.
 
 ## Entrypoints
 
