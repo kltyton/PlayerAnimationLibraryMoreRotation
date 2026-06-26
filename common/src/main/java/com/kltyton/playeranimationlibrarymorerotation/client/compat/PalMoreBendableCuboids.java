@@ -8,6 +8,7 @@ import com.zigythebird.bendable_cuboids.api.BendableModelPart;
 import com.zigythebird.bendable_cuboids.impl.BendUtil;
 import com.zigythebird.bendable_cuboids.impl.BendableCuboid;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.core.Direction;
 import org.joml.Vector3f;
 
 import java.util.Collections;
@@ -95,15 +96,15 @@ public final class PalMoreBendableCuboids {
 
         cuboid.iteratePositions(original -> {
             Vector3f vector = nativeBend.apply(original);
-            float factor = bendLowerSegmentFactor(original.y, pivotY, height);
+            float factor = bendSegmentFactor(cube, original.y, pivotY, height);
             if (hasTransform(state)) {
                 applyBendOnlyTransform(vector, factor, pivotX, pivotY, pivotZ, state);
             }
             if (!isZero(state.bendZ())) {
-                rotateZ(vector, pivotX, pivotY, pivotZ, -state.bendZ() * factor);
+                rotateZ(vector, pivotX, pivotY, pivotZ, state.bendZ() * factor);
             }
             if (!isZero(state.bendY())) {
-                rotateY(vector, pivotX, pivotY, pivotZ, -state.bendY() * factor);
+                rotateY(vector, pivotX, pivotY, pivotZ, state.bendY() * factor);
             }
             return vector;
         });
@@ -145,10 +146,10 @@ public final class PalMoreBendableCuboids {
             poseStack.scale(bend.palMore$getBendScaleX(), bend.palMore$getBendScaleY(), bend.palMore$getBendScaleZ());
         }
         if (hasBendZ) {
-            poseStack.mulPose(Axis.ZP.rotation(-bend.palMore$getBendZ()));
+            poseStack.mulPose(Axis.ZP.rotation(bend.palMore$getBendZ()));
         }
         if (hasBendY) {
-            poseStack.mulPose(Axis.YP.rotation(-bend.palMore$getBendY()));
+            poseStack.mulPose(Axis.YP.rotation(bend.palMore$getBendY()));
         }
         if (!isZero(bendX)) {
             poseStack.mulPose(Axis.XP.rotation(bendX));
@@ -164,8 +165,11 @@ public final class PalMoreBendableCuboids {
         }
     }
 
-    private static float bendLowerSegmentFactor(float y, float hingeY, float height) {
+    private static float bendSegmentFactor(BendableCube cube, float y, float hingeY, float height) {
         float halfHeight = Math.max(EPSILON, height * 0.5F);
+        if (cube.getBendDirection() == Direction.DOWN) {
+            return Math.clamp((hingeY - y) / halfHeight, 0.0F, 1.0F);
+        }
         return Math.clamp((y - hingeY) / halfHeight, 0.0F, 1.0F);
     }
 
