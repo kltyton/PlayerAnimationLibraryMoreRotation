@@ -20,7 +20,7 @@ public final class PalMoreClientPayloadHandler {
             if (payload.stop()) {
                 PalMoreClientAnimations.stopLocal(avatar);
             } else {
-                PalMoreClientAnimations.playLocal(avatar, payload.animationId());
+                PalMoreClientAnimations.playLocal(avatar, payload.animationId(), payload.controllerId());
             }
         }
     }

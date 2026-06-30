@@ -1,6 +1,7 @@
 package com.kltyton.playeranimationlibrarymorerotation.network.payload;
 
 import com.kltyton.playeranimationlibrarymorerotation.Playeranimationlibrarymorerotation;
+import com.kltyton.playeranimationlibrarymorerotation.PalMoreAnimationController;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -13,8 +14,9 @@ import net.minecraft.resources.Identifier;
  * @param avatarEntityId target Avatar entity id
  * @param animationId    PAL animation id to play
  * @param stop           true stops the current triggered animation and ignores animationId
+ * @param controllerId   client-side PalMore playback controller id
  */
-public record PlayerAnimationPayload(int avatarEntityId, Identifier animationId, boolean stop)
+public record PlayerAnimationPayload(int avatarEntityId, Identifier animationId, boolean stop, Identifier controllerId)
         implements CustomPacketPayload {
     public static final Type<PlayerAnimationPayload> ID =
             new Type<>(Playeranimationlibrarymorerotation.id("player_animation"));
@@ -23,8 +25,13 @@ public record PlayerAnimationPayload(int avatarEntityId, Identifier animationId,
             ByteBufCodecs.VAR_INT, PlayerAnimationPayload::avatarEntityId,
             Identifier.STREAM_CODEC, PlayerAnimationPayload::animationId,
             ByteBufCodecs.BOOL, PlayerAnimationPayload::stop,
+            Identifier.STREAM_CODEC, PlayerAnimationPayload::controllerId,
             PlayerAnimationPayload::new
     );
+
+    public PlayerAnimationPayload(int avatarEntityId, Identifier animationId, boolean stop) {
+        this(avatarEntityId, animationId, stop, PalMoreAnimationController.DEFAULT_ID);
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
