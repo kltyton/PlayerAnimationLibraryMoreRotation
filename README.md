@@ -9,6 +9,7 @@ playback/sync API for downstream mods.
 
 ## Supported Versions
 
+- Library: `1.0.2`
 - Minecraft: `26.1.2`
 - Fabric Loader: `0.19.3`
 - Fabric API: `0.153.0+26.1.2`
@@ -30,6 +31,24 @@ playback/sync API for downstream mods.
 - Sorts JSON keyframes by timestamp for more predictable exported animations.
 - Provides reusable play, stop, server sync, and client receive APIs for PAL
   animations.
+- Adds controller-aware playback and controller-local handlers for PAL
+  `timeline`, `sound_effects`, and `particle_effects` keyframes.
+
+## Gradle Dependency
+
+Published artifact ids include the loader name and Minecraft version:
+
+```gradle
+repositories {
+    mavenLocal()
+}
+
+dependencies {
+    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.1.2:1.0.2"
+    // or:
+    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.1.2:1.0.2"
+}
+```
 
 ## Animation Resource Path
 
@@ -172,6 +191,17 @@ PalMoreAnimations.stop((ServerPlayer) player);
 The server broadcasts to same-dimension clients that support this library's
 payload.
 
+Optional controller selection:
+
+```java
+Identifier attackController = Identifier.fromNamespaceAndPath("mob_battle", "attack_controller");
+
+PalMoreAnimations.play((ServerPlayer) player, animation, attackController);
+```
+
+The server sends only the controller id. Handler lambdas are local JVM state and
+must be registered on the physical client before playback.
+
 ## Client Playback API
 
 ```java
@@ -197,6 +227,67 @@ PalMoreClientAnimations.playLocal(
 );
 ```
 
+## Keyframe Controller API
+
+PAL already parses Blockbench / Bedrock effect tracks:
+
+```json
+{
+  "timeline": {
+    "0.3333": "runAttack;"
+  }
+}
+```
+
+It also parses `sound_effects` and `particle_effects`. This library lets a
+downstream mod attach controller-local handlers to those native PAL keyframes:
+
+```java
+import com.kltyton.playeranimationlibrarymorerotation.PalMoreAnimationController;
+import com.kltyton.playeranimationlibrarymorerotation.client.PalMoreClientAnimations;
+import net.minecraft.resources.Identifier;
+
+public static final Identifier ATTACK_CONTROLLER =
+        Identifier.fromNamespaceAndPath("mob_battle", "attack_controller");
+
+public static final PalMoreAnimationController ATTACK_PLAYBACK =
+        PalMoreAnimationController.create(ATTACK_CONTROLLER)
+                .setCustomInstructionKeyframeHandler(s -> {
+                    String instruction = s.instructions().replaceAll("\\s+", "");
+                    if ("runAttack;".equals(instruction)) {
+                        // Client-side visual action here.
+                    }
+                })
+                .setParticleKeyframeHandler(s -> {
+                    String effect = s.effect();
+                    String locator = s.locator();
+                    String script = s.script();
+                })
+                .setSoundKeyframeHandler(s -> {
+                    String sound = s.sound();
+                });
+
+public static void onClientInit() {
+    PalMoreClientAnimations.registerController(ATTACK_PLAYBACK);
+}
+```
+
+Then trigger it from server code:
+
+```java
+PalMoreAnimations.play((ServerPlayer) player, animation, ATTACK_CONTROLLER);
+```
+
+For purely local playback, a controller object can be passed directly:
+
+```java
+PalMoreClientAnimations.playLocal(avatar, animation, ATTACK_PLAYBACK);
+```
+
+Controller handlers run on the client-side PAL playback path. Server-authority
+gameplay effects should still be executed by server-side game logic or by a
+separate validated network flow.
+
 ## Network Payload
 
 Clientbound payload id:
@@ -211,6 +302,7 @@ Fields:
 avatarEntityId: VarInt
 animationId: Identifier
 stop: Boolean
+controllerId: Identifier
 ```
 
 Downstream mods do not need to register this payload or receiver again.
