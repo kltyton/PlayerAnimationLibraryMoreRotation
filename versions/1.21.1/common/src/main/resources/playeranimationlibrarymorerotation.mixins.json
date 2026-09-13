@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.kltyton.playeranimationlibrarymorerotation.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "AnimationControllerBendVectorMixin",
+    "AnimationLoaderKeyframeSortMixin",
+    "PlayerAnimManagerBendVectorResetMixin",
+    "ItemInHandLayerBendVectorMixin",
+    "PlayerAnimBoneBendVectorMixin",
+    "PlayerModelBendVectorMixin",
+    "PlayerItemRotationFixMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

@@ -8,14 +8,16 @@ PlayerAnimationLibraryMoreRotation 是一个 Fabric / NeoForge 多加载器运�
 
 ## 支持版本
 
-- 本库版本：`1.0.2`
-- Minecraft: `26.1.2`
-- Fabric Loader: `0.19.3`
-- Fabric API: `0.153.0+26.1.2`
-- NeoForge: `26.1.2.76`
-- Player Animation Library Fabric / Neo: `1.2.4+mc.26.1`
-- bendable-cuboids: `2.0.2`
+- 本库版本：`1.1.0`
+- Minecraft: `26.2`
+- Fabric Loader: `0.19.5`
+- Fabric API: `0.160.0+26.2`
+- NeoForge: `26.2.0.87`
+- Player Animation Library Fabric / Neo: `1.2.6+mc.26.2`
+- bendable-cuboids: `2.0.4`
 - Java: `25`
+
+根项目对应 26.2；其他版本位于独立的 `versions/<Minecraft版本>/` 项目中，依赖与验收状态见[版本表](docs/version-matrix.md)。匹配的 Bendable Cuboids 已通过 jar-in-jar 内置。
 
 ## 功能
 
@@ -41,9 +43,9 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.1.2:1.0.2"
+    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.1.0"
     // 或：
-    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.1.2:1.0.2"
+    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.1.0"
 }
 ```
 
