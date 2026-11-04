@@ -22,10 +22,10 @@ dependencies {
     compileOnly("com.zigythebird.playeranim:PlayerAnimationLibCore:${pal_version}") {
         transitive = false
     }
-    compileOnly("com.zigythebird:mochafloats:5.0.0") {
+    compileOnly("com.zigythebird:mochafloats:5.0.1") {
         transitive = false
     }
-    compileOnly("org.redlance.common-utils:services:1.3.3") {
+    compileOnly("org.redlance.common-utils:services:1.3.8") {
         transitive = false
     }
     compileOnly("maven.modrinth:bendable-cuboids:${bendable_cuboids_version}") {

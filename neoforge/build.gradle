@@ -52,10 +52,10 @@ dependencies {
     implementation("com.zigythebird.playeranim:PlayerAnimationLibCore:${pal_version}") {
         transitive = false
     }
-    implementation("com.zigythebird:mochafloats:5.0.0") {
+    implementation("com.zigythebird:mochafloats:5.0.1") {
         transitive = false
     }
-    implementation("org.redlance.common-utils:services:1.3.3") {
+    implementation("org.redlance.common-utils:services:1.3.8") {
         transitive = false
     }
     implementation("maven.modrinth:bendable-cuboids:${bendable_cuboids_version}") {
