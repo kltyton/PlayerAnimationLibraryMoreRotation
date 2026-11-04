@@ -592,3 +592,62 @@ For Minecraft 1.21.8 specifically, `PlayerModelBendVectorMixin` restores PAL's `
 
 
 Each shared `pack.mcmeta` covers both the resource and data format from that Minecraft client jar's `version.json`. The 1.21.9–1.21.11 format transition requires the legacy `pack_format` / `supported_formats` fields and a minimum of 64 for one shared metadata file to satisfy both client and server decoders (their legacy cutoffs differ: 64 versus 81). This does not expand the mod's declared Minecraft compatibility. Java library dependencies used by legacy development clients match their PAL POMs, including Javassist and the version-specific Mocha runtime; these libraries are supplied by PAL in normal mod installations.
+
+## Legacy rendering coexistence
+
+MoreRotation remains an extension of PAL and bendable-cuboids; both are required.
+The legacy adapter is selected only in the Minecraft 1.21.1 project, where
+playerAnimator 2.0.1 and bendy-lib 5.1 provide the matching Minecraft interfaces.
+It does not replace either animation controller or migrate Emotecraft resources.
+
+`LegacyBendyCubeMixin` targets `BendableCuboid.compile`. An active bendy-lib
+mutator is dispatched through the original `ModelPart.Cube.compile` hook,
+including its native `disableAfterDraw` handling. Without an active mutator the
+Bendable Cuboids method continues normally, including PAL vector bend and
+bend-local position/scale. This preserves the native mutator priority for that
+cube without changing either animation manager or its event handlers.
+
+`LegacyBendyModelPartMixin` observes bendy-lib's existing `redirectRenderCuboids`
+handler through MixinSquared before its normal body continues.
+Only the legacy `VanillaDraw` branch that bypasses `ModelPart.compile` receives
+explicit KBR capture notifications. The regular compile branch keeps its
+existing callbacks, preventing duplicate model/held-item capture.
+
+The conditional `LegacyModelPartAccess` reads the legacy branch state and KBR
+part path. `KbrVanillaModelCaptureInvoker` and `KbrHeldItemCaptureInvoker` link
+the public KBR 0.4.0 capture methods without a mandatory KBR class dependency.
+`PalMoreMixinPlugin` selects these compatibility mixins from bytecode presence
+without initializing optional classes; it leaves every existing PAL mixin
+enabled. bendy-lib is compile-only and is not bundled into MoreRotation.
+
+```mermaid
+flowchart TD
+    A[ModelPart.render] --> B[MoreRotation capture coordination]
+    B --> C[bendy-lib original draw operation]
+    C -->|regular branch| D[ModelPart.compile and native KBR capture]
+    C -->|direct cube branch| E[Cube.compile with compensated KBR capture]
+    D --> F[Bendable Cuboids compile]
+    E --> F
+    F -->|active legacy mutator| G[Original Cube.compile mutator hook]
+    F -->|no legacy mutator| H[PAL and Bendable Cuboids geometry]
+```
+
+Legacy bend angle and direction retain bendy-lib radians and its native
+geometry conventions. Existing PAL JSON channel units and resource paths
+remain unchanged.
+
+## Current PAL sampling
+
+Minecraft 26.1, 26.1.1, 26.1.2 and 26.2 use PAL 1.2.8. Their sidecar sampler
+invokes PAL `AnimationController.computeAnimValue` with the current queued
+animation, tracks, transform type and easing override. Minecraft 1.21.11 uses
+PAL 1.1.11 `getAnimationPointAtTick` and its native easing evaluation. This keeps
+loop seams and easing-before behavior on the same implementation as ordinary
+PAL channels. Absent bend-local tracks retain zero position, unit scale and the
+existing native X bend. Sampling does not advance the animation or fire
+keyframe handlers.
+
+The 26.2 development classpath matches the actual PAL merged distribution: its
+mochafloats 5.0.1 and services 1.3.8 APIs are supplied by PAL at runtime. KBR
+keeps its separate private mochafloats packages; no second public Molang
+runtime is added to this extension.

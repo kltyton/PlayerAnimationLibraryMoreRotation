@@ -9,16 +9,21 @@ playback/sync API for downstream mods.
 
 ## Supported Versions
 
-- Library: `1.1.0`
+- Library: `1.2.0`
 - Minecraft: `26.2`
 - Fabric Loader: `0.19.5`
 - Fabric API: `0.160.0+26.2`
 - NeoForge: `26.2.0.87`
-- Player Animation Library Fabric / Neo: `1.2.6+mc.26.2`
+- Player Animation Library Fabric / Neo: `1.2.8+mc.26.2`
 - bendable-cuboids: `2.0.4`
 - Java: `25`
 
 The root targets 26.2; independent older-version projects and their validation status are listed in [the version matrix](docs/version-matrix.md). Matching Bendable Cuboids is bundled.
+
+PAL and bendable-cuboids remain required dependencies. The Minecraft 1.21.1
+integration also supports coexistence with playerAnimator 2.0.1, bendy-lib 5.1,
+and Kltyton Bedrock Runtime 0.4.0. Emotecraft keeps its own playback and file
+loading; the public playback API continues to operate on PAL controllers.
 
 ## Features
 
@@ -36,6 +41,11 @@ The root targets 26.2; independent older-version projects and their validation s
 - Adds controller-aware playback and controller-local handlers for PAL
   `timeline`, `sound_effects`, and `particle_effects` keyframes.
 
+- Restores legacy bendy-lib mutator dispatch on Bendable Cuboids player cubes
+  in Minecraft 1.21.1, retaining native mutator cleanup.
+- Preserves Kltyton Bedrock Runtime model and held-item capture callbacks when
+  the legacy renderer draws cubes without calling `ModelPart.compile`.
+
 ## Gradle Dependency
 
 Published artifact ids include the loader name and Minecraft version:
@@ -46,9 +56,9 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.1.0"
+    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.2.0"
     // or:
-    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.1.0"
+    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.2.0"
 }
 ```
 

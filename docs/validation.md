@@ -1,5 +1,21 @@
 # Validation
 
+## Compatibility development
+
+Build each independent version project with its Wrapper and matching Java
+version. A source-only check can compile both loaders with `gradlew.bat build`
+and inspect the resulting loader metadata, Mixin descriptors and nested JARs.
+The 1.21.1 compatibility classes are conditional on bendy-lib and, for capture
+coordination, Kltyton Bedrock Runtime. PAL and bendable-cuboids stay required.
+
+For a separately requested in-game coexistence check, keep PAL animations and
+Emotecraft emotes in their respective normal resource locations. Exercise a
+PAL bend animation, a legacy Emotecraft bend, stopping each animation, the
+second skin, and KBR model/held-item selection. Legacy native mutator cleanup
+and single capture per draw are the relevant integration boundaries.
+
+## Version 1.1.0 archive
+
 Date: 2026-09-13
 
 ## Runtime acceptance
