@@ -9,21 +9,22 @@ playback/sync API for downstream mods.
 
 ## Supported Versions
 
-- Library: `1.2.0`
+- Library: `1.2.1`
 - Minecraft: `26.2`
 - Fabric Loader: `0.19.5`
 - Fabric API: `0.160.0+26.2`
 - NeoForge: `26.2.0.87`
-- Player Animation Library Fabric / Neo: `1.2.8+mc.26.2`
+- Player Animation Library Fabric / Neo: `1.2.9+mc.26.2`
 - bendable-cuboids: `2.0.4`
 - Java: `25`
 
 The root targets 26.2; independent older-version projects and their validation status are listed in [the version matrix](docs/version-matrix.md). Matching Bendable Cuboids is bundled.
 
-PAL and bendable-cuboids remain required dependencies. The Minecraft 1.21.1
-integration also supports coexistence with playerAnimator 2.0.1, bendy-lib 5.1,
-and Kltyton Bedrock Runtime 0.4.0. Emotecraft keeps its own playback and file
-loading; the public playback API continues to operate on PAL controllers.
+PAL and bendable-cuboids remain required dependencies. Minecraft 1.21.1 includes
+default EMF player and armor model definitions, so a separate EmoteBend resource
+pack is not needed for these default models. EMF keeps its normal resource-pack
+priority, including custom player models. Emotecraft keeps its own playback and
+file loading; the public playback API operates on PAL controllers.
 
 ## Features
 
@@ -41,10 +42,10 @@ loading; the public playback API continues to operate on PAL controllers.
 - Adds controller-aware playback and controller-local handlers for PAL
   `timeline`, `sound_effects`, and `particle_effects` keyframes.
 
-- Restores legacy bendy-lib mutator dispatch on Bendable Cuboids player cubes
-  in Minecraft 1.21.1, retaining native mutator cleanup.
-- Preserves Kltyton Bedrock Runtime model and held-item capture callbacks when
-  the legacy renderer draws cubes without calling `ModelPart.compile`.
+- Integrates Minecraft 1.21.1 default player and armor models through EMF's CEM
+  resource extension point while retaining their original geometry and UVs.
+- Uses the Molang 6.2 modules supplied by current PAL releases on Minecraft
+  1.21.11 and 26.1+.
 
 ## Gradle Dependency
 
@@ -56,9 +57,9 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.2.0"
+    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.2.1"
     // or:
-    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.2.0"
+    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.2.1"
 }
 ```
 

@@ -5,14 +5,15 @@
 Build each independent version project with its Wrapper and matching Java
 version. A source-only check can compile both loaders with `gradlew.bat build`
 and inspect the resulting loader metadata, Mixin descriptors and nested JARs.
-The 1.21.1 compatibility classes are conditional on bendy-lib and, for capture
-coordination, Kltyton Bedrock Runtime. PAL and bendable-cuboids stay required.
+Inspect the four Minecraft 1.21.1 CEM definitions in both loader JARs and check
+that the current PAL targets reference their supplied Molang modules. PAL and
+bendable-cuboids stay required.
 
 For a separately requested in-game coexistence check, keep PAL animations and
 Emotecraft emotes in their respective normal resource locations. Exercise a
 PAL bend animation, a legacy Emotecraft bend, stopping each animation, the
-second skin, and KBR model/held-item selection. Legacy native mutator cleanup
-and single capture per draw are the relevant integration boundaries.
+second skin, armor, and higher-priority custom CEM resource packs. Keep EMF's
+normal resource-pack priority and native animation coordination in that check.
 
 ## Version 1.1.0 archive
 

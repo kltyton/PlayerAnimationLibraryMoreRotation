@@ -8,20 +8,21 @@ PlayerAnimationLibraryMoreRotation 是一个 Fabric / NeoForge 多加载器运�
 
 ## 支持版本
 
-- 本库版本：`1.2.0`
+- 本库版本：`1.2.1`
 - Minecraft: `26.2`
 - Fabric Loader: `0.19.5`
 - Fabric API: `0.160.0+26.2`
 - NeoForge: `26.2.0.87`
-- Player Animation Library Fabric / Neo: `1.2.8+mc.26.2`
+- Player Animation Library Fabric / Neo: `1.2.9+mc.26.2`
 - bendable-cuboids: `2.0.4`
 - Java: `25`
 
 根项目对应 26.2；其他版本位于独立的 `versions/<Minecraft版本>/` 项目中，依赖与验收状态见[版本表](docs/version-matrix.md)。匹配的 Bendable Cuboids 已通过 jar-in-jar 内置。
 
-PAL 和 bendable-cuboids 仍是必需依赖。Minecraft 1.21.1 的兼容层支持与
-playerAnimator 2.0.1、bendy-lib 5.1 和 Kltyton Bedrock Runtime 0.4.0 共装。
-Emotecraft 继续使用自己的播放与文件加载流程，本库的公共播放 API 继续操作 PAL 控制器。
+PAL 和 bendable-cuboids 仍是必需依赖。Minecraft 1.21.1 内置默认玩家和盔甲的
+EMF 模型定义，这些默认模型无需额外安装 EmoteBend 资源包。自定义玩家模型继续按
+EMF 原有的资源包优先级加载。Emotecraft 继续使用自己的播放与文件加载流程，
+本库的公共播放 API 操作 PAL 控制器。
 
 ## 功能
 
@@ -37,10 +38,9 @@ Emotecraft 继续使用自己的播放与文件加载流程，本库的公共播
 - 增加带 controller 的播放 API，并为 PAL 的 `timeline`、`sound_effects`、
   `particle_effects` 关键帧提供 controller-local handler。
 
-- 在 Minecraft 1.21.1 的 Bendable Cuboids 玩家 cube 上恢复旧 bendy-lib 的
-  mutator 绘制入口，并保留旧库原生的绘制后清理行为。
-- 当旧渲染器逐 cube 绘制而绕过 `ModelPart.compile` 时，保留 Kltyton Bedrock
-  Runtime 的模型和手持物品捕获回调。
+- 通过 EMF 原生 CEM 资源扩展点接入 Minecraft 1.21.1 默认玩家和盔甲模型，
+  保留原模型的几何与 UV。
+- Minecraft 1.21.11 和 26.1+ 使用当前 PAL 提供的 Molang 6.2 模块。
 
 ## Gradle 依赖
 
@@ -52,9 +52,9 @@ repositories {
 }
 
 dependencies {
-    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.2.0"
+    modImplementation "com.kltyton:playeranimationlibrarymorerotation-fabric-26.2:1.2.1"
     // 或：
-    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.2.0"
+    implementation "com.kltyton:playeranimationlibrarymorerotation-neoforge-26.2:1.2.1"
 }
 ```
 
