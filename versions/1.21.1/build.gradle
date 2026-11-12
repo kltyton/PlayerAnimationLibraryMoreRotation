@@ -11,11 +11,6 @@ allprojects {
 
     repositories {
         maven {
-            name = 'KosmX'
-            url = 'https://maven.kosmx.dev'
-            content { includeGroup 'io.github.kosmx.bendy-lib' }
-        }
-        maven {
             url = rootProject.uri("libs/maven")
             content { includeGroup "com.zigythebird.bendable_cuboids" }
         }

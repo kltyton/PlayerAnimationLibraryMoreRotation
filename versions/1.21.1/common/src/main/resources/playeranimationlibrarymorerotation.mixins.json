@@ -2,7 +2,6 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.kltyton.playeranimationlibrarymorerotation.mixin",
-  "plugin": "com.kltyton.playeranimationlibrarymorerotation.mixin.PalMoreMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
@@ -12,12 +11,7 @@
     "ItemInHandLayerBendVectorMixin",
     "PlayerAnimBoneBendVectorMixin",
     "PlayerModelBendVectorMixin",
-    "PlayerItemRotationFixMixin",
-    "compat.bendy.LegacyBendyCubeMixin",
-    "compat.bendy.LegacyModelPartAccess",
-    "compat.bendy.KbrVanillaModelCaptureInvoker",
-    "compat.bendy.KbrHeldItemCaptureInvoker",
-    "compat.bendy.LegacyBendyModelPartMixin"
+    "PlayerItemRotationFixMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -46,9 +46,6 @@ neoForge {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
-    compileOnly('io.github.kosmx.bendy-lib:bendy-lib-forge:5.1') {
-        transitive = false
-    }
     runtimeOnly("org.javassist:javassist:3.30.2-GA")
     implementation("com.zigythebird.playeranim:PlayerAnimationLibNeo:${pal_version}") {
         transitive = false

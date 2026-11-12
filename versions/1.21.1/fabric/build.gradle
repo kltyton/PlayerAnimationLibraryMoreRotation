@@ -3,9 +3,6 @@ plugins {
     id 'net.fabricmc.fabric-loom-remap'
 }
 dependencies {
-    modCompileOnly('io.github.kosmx.bendy-lib:bendy-lib-fabric:5.1') {
-        transitive = false
-    }
     runtimeOnly("org.javassist:javassist:3.30.2-GA")
     minecraft("com.mojang:minecraft:${minecraft_version}")
     mappings loom.officialMojangMappings()
