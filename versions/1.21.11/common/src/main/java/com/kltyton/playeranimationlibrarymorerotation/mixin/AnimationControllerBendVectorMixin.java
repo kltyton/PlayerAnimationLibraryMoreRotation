@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import team.unnamed.mocha.MochaEngine;
+import org.redlance.mocha.runtime.MolangInterpreter;
 
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,7 @@ public abstract class AnimationControllerBendVectorMixin {
     protected Map<String, PivotBone> pivotBones;
     @Final
     @Shadow
-    protected MochaEngine<AnimationController> molangRuntime;
+    protected MolangInterpreter<AnimationController> molangRuntime;
     @Shadow
     protected Function<AnimationController, EasingType> overrideEasingTypeFunction;
 

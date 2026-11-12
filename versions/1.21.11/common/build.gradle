@@ -22,7 +22,13 @@ dependencies {
     compileOnly("com.zigythebird.playeranim:PlayerAnimationLibCore:${pal_version}") {
         transitive = false
     }
-    compileOnly("com.zigythebird:mochafloats:4.1.5") {
+    compileOnly("org.redlance.mochafloats:parser:6.2.0") {
+        transitive = false
+    }
+    compileOnly("org.redlance.mochafloats:lexer:6.2.0") {
+        transitive = false
+    }
+    compileOnly("org.redlance.mochafloats:runtime:6.2.0") {
         transitive = false
     }
     compileOnly("maven.modrinth:bendable-cuboids:${bendable_cuboids_neoforge_version}") {
