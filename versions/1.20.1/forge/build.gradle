@@ -1,0 +1,66 @@
+plugins {
+    id 'multiloader-loader'
+    id 'net.neoforged.moddev.legacyforge'
+}
+
+legacyForge {
+    version = forge_version
+    def at = project(':common').file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (at.exists()) {
+        accessTransformers.from(at.absolutePath)
+    }
+    runs {
+        configureEach {
+            systemProperty('forge.enabledGameTestNamespaces', mod_id)
+            ideName = "Forge ${it.name.capitalize()} (${project.path})"
+        }
+        client {
+            client()
+            gameDirectory = this.mkdir(rootProject.file('run/forge-client'))
+        }
+        server {
+            server()
+            gameDirectory = this.mkdir(rootProject.file('run/forge-server'))
+        }
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+mixin {
+    config "${mod_id}.mixins.json"
+    add(sourceSets.main, "${mod_id}.refmap.json")
+}
+
+jar {
+    manifest {
+        attributes('MixinConfigs': "${mod_id}.mixins.json")
+    }
+}
+
+dependencies {
+    annotationProcessor('org.spongepowered:mixin:0.8.5:processor')
+    modImplementation("dev.kosmx.player-anim:player-animation-lib-forge:${player_animator_version}")
+    modImplementation("io.github.kosmx.bendy-lib:bendy-lib-forge:${bendy_lib_version}")
+}
+
+def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+['apiElements', 'runtimeElements', 'sourcesElements', 'javadocElements'].each { variant ->
+    configurations.findByName(variant)?.with {
+        attributes {
+            attribute(loaderAttribute, 'forge')
+        }
+    }
+}
+sourceSets.configureEach {
+    [it.compileClasspathConfigurationName, it.runtimeClasspathConfigurationName].each { variant ->
+        configurations.named(variant) {
+            attributes {
+                attribute(loaderAttribute, 'forge')
+            }
+        }
+    }
+}

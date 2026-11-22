@@ -1,0 +1,32 @@
+plugins {
+    id 'net.fabricmc.fabric-loom-remap' version '1.17.20' apply false
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148' apply false
+}
+
+allprojects {
+    version = rootProject.version
+    group = rootProject.group
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = "KosmX's Maven"
+            url = "https://maven.kosmx.dev/"
+        }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "Modrinth"
+                    url = "https://api.modrinth.com/maven"
+                }
+            }
+            filter {
+                includeGroup "maven.modrinth"
+            }
+        }
+        maven {
+            name = "MinecraftForge"
+            url = "https://maven.minecraftforge.net/"
+        }
+    }
+}

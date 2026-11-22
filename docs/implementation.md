@@ -641,3 +641,53 @@ The updated PAL targets use `org.redlance.mocha` AST and interpreter types.
 Their development classpaths use the `org.redlance.mochafloats` parser, lexer,
 and runtime 6.2.0 modules already supplied by PAL in normal installations.
 MoreRotation does not embed another Molang runtime.
+
+## Minecraft 1.20.1 (`playerAnimator` + `bendy-lib`)
+
+`versions/1.20.1/` is an independent Java 17 Gradle project targeting Fabric and
+Forge with `playerAnimator` (`1.0.2-rc1+1.20`) and `bendy-lib` (`4.0.0`) as
+required external dependencies (not embedded).
+
+### Source findings on 1.20.1
+
+- `PlayerAnimationRegistry.resourceLoaderCallback` only scans
+  `assets/<namespace>/player_animation/*.json`.
+- `GeckoLibSerializer.readBone` only parses `rotation` and `position`; it ignores
+  `bend`, `scale`, `timeline`, `sound_effects`, and `particle_effects`, and
+  iterates JSON object entries without timestamp sorting.
+- `PlayerModelMixin` (priority `2000`) updates vanilla parts before `copyFrom`;
+  `bendy-lib`'s `BendableCuboid` exposes `applyBend(float axis, float bend)`,
+  `iteratePositions(Consumer<IPosWithOrigin>)`, `getBendDirection()`,
+  `getBendX/Y/Z()`, and `bendHeight()`.
+- `HeldItemMixin` applies native 2-parameter arm bend before vanilla item
+  orientation (`PoseStack#mulPose` ordinal 0) and applies `leftItem`/`rightItem`
+  position and rotation before `ItemInHandRenderer#renderItem`.
+
+### Mixins and architecture on 1.20.1
+
+- `PlayerAnimationRegistryMixin`: injects at `RETURN` of
+  `PlayerAnimationRegistry#resourceLoaderCallback` to also register animations
+  from `assets/<namespace>/player_animations/*.json` and populate sidecar
+  `PalMoreAnimationExtras` from both `player_animation/` and `player_animations/`.
+- `GeckoLibSerializerKeyframeSortMixin`: sorts timestamped `rotation` and
+  `position` entries in ascending timestamp order at `HEAD` of
+  `GeckoLibSerializer#readBone`.
+- `PlayerModelExtendedAnimMixin` (priority `2500`): resets `xScale/yScale/zScale`
+  at `HEAD` of `PlayerModel#setupAnim`, and at `RETURN` (after `PlayerModelMixin`
+  and `copyFrom`) applies bone scale and `PalMoreBendyCuboids` extended bend
+  (`bendX/Y/Z`, `bend.position`, `bend.scale`) to both main parts and overlays
+  (`jacket`, `leftSleeve`, `rightSleeve`, `leftPants`, `rightPants`). Legacy
+  Emotecraft animations without sidecar tracks remain on native `bendy-lib`
+  2-parameter bending.
+- `PlayerRendererScaleMixin` (priority `2500`): applies whole-body (`body`) scale
+  at `RETURN` of `PlayerRenderer#setupRotations`.
+- `ItemInHandLayerExtendedAnimMixin` (priority `2500`): applies extended arm bend
+  (replacing native held-item bend matrix when sidecar bend is active) before
+  `PoseStack#mulPose` ordinal 0 and applies `leftItem`/`rightItem` scale before
+  `ItemInHandRenderer#renderItem`.
+- `PalMoreClientAnimations` registers a dedicated `ModifierLayer<IAnimation>` via
+  `PlayerAnimationFactory.ANIMATION_DATA_FACTORY` (`playeranimationlibrarymorerotation:animation`)
+  and plays `PalMoreKeyframePlayer`, dispatching `timeline`, `sound_effects`, and
+  `particle_effects` keyframes to `PalMoreAnimationController`.
+- Networking uses `playeranimationlibrarymorerotation:player_animation` over
+  Fabric `ServerPlayNetworking`/`ClientPlayNetworking` and Forge `SimpleChannel`.
