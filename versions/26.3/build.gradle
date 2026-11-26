@@ -1,0 +1,50 @@
+plugins {
+    // see https://fabricmc.net/develop/ for new versions
+    id 'net.fabricmc.fabric-loom' version '1.19.4' apply false
+    // see https://projects.neoforged.net/neoforged/moddevgradle for new versions
+    id 'net.neoforged.moddev' version '2.0.148' apply false
+}
+
+allprojects {
+    version = rootProject.version
+    group = rootProject.group
+
+    repositories {
+        mavenCentral()
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "Modrinth"
+                    url = "https://api.modrinth.com/maven"
+                }
+            }
+            filter {
+                includeGroup "maven.modrinth"
+            }
+        }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "RedlanceMinecraft"
+                    url = "https://repo.redlance.org/public"
+                }
+            }
+            filter {
+                includeGroup "com.zigythebird.playeranim"
+                includeGroup "org.redlance.mochafloats"
+                includeGroup "org.redlance.common-utils"
+            }
+        }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "Bawnorton"
+                    url = "https://maven.bawnorton.com/releases"
+                }
+            }
+            filter {
+                includeGroup "com.github.bawnorton.mixinsquared"
+            }
+        }
+    }
+}

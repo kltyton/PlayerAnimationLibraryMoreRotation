@@ -628,7 +628,7 @@ their existing meanings.
 
 ## Current PAL sampling
 
-Minecraft 26.1, 26.1.1, 26.1.2 and 26.2 use PAL 1.2.9. Their sidecar sampler
+Minecraft 26.1, 26.1.1, 26.1.2, 26.2, and 26.3 use PAL 1.2.9. Their sidecar sampler
 invokes PAL `AnimationController.computeAnimValue` with the current queued
 animation, tracks, transform type and easing override. Minecraft 1.21.11 uses
 PAL 1.1.12 `getAnimationPointAtTick` and its native easing evaluation. This keeps
@@ -641,6 +641,21 @@ The updated PAL targets use `org.redlance.mocha` AST and interpreter types.
 Their development classpaths use the `org.redlance.mochafloats` parser, lexer,
 and runtime 6.2.0 modules already supplied by PAL in normal installations.
 MoreRotation does not embed another Molang runtime.
+
+## Minecraft 26.3
+
+`versions/26.3/` is an independent Java 25 Gradle project targeting Fabric and
+NeoForge on Minecraft 26.3 with PAL `1.2.9+mc.26.3`, embedded Bendable Cuboids
+`2.1.0` (`BendableCuboidsMerged-2.1.0+mc.26.3.jar`), and MixinSquared `0.3.9`.
+
+- `PlayerItemRotationFixMixin` and `PalMoreBendableCuboids#applyArmItemBend` use
+  Minecraft 26.3's `PoseStack#rotate(Axis, float)` in place of the removed
+  `PoseStack#mulPose(Quaternionfc)` overload.
+- `common/src/main/resources/pack.mcmeta` declares `"min_format": [97, 0]` and
+  `"max_format": [121, 0]` matching Minecraft 26.3's resource and data pack
+  formats.
+- Development classpaths use `org.redlance.common-utils:services:1.4.2` to match
+  `PlayerAnimationLibCore-1.2.9+mc.26.3`.
 
 ## Minecraft 1.20.1 (`playerAnimator` + `bendy-lib`)
 

@@ -1,6 +1,6 @@
 # Runtime version matrix
 
-The root targets Minecraft 26.2. Older versions are independent Gradle projects under `versions/<Minecraft>/`. Minecraft 1.21.1–26.2 produce MoreRotation 1.2.1 for Fabric and NeoForge and embed the matching Bendable Cuboids artifact. Minecraft 1.20.1 produces MoreRotation 1.2.1 for Fabric and Forge targeting external `playerAnimator` + `bendy-lib` dependencies.
+The root targets Minecraft 26.2. Additional versions are independent Gradle projects under `versions/<Minecraft>/`. Minecraft 1.21.1–26.3 produce MoreRotation 1.2.1 for Fabric and NeoForge and embed the matching Bendable Cuboids artifact. Minecraft 1.20.1 produces MoreRotation 1.2.1 for Fabric and Forge targeting external `playerAnimator` + `bendy-lib` dependencies.
 
 ## Dependencies
 
@@ -17,6 +17,7 @@ The root targets Minecraft 26.2. Older versions are independent Gradle projects 
 | 26.1.1 | 25 | 1.2.9+mc.26.1 | 2.0.2 | 0.19.5 | 0.145.4+26.1.1 | 26.1.1.15-beta |
 | 26.1.2 | 25 | 1.2.9+mc.26.1 | 2.0.2 | 0.19.5 | 0.155.3+26.1.2 | 26.1.2.109 |
 | 26.2 | 25 | 1.2.9+mc.26.2 | 2.0.4 | 0.19.5 | 0.160.0+26.2 | 26.2.0.87 |
+| 26.3 | 25 | 1.2.9+mc.26.3 | 2.1.0 | 0.20.1 (`>=0.19.5`) | 0.167.0+26.3 | 26.3.0.118 (`[26.3.0.33-beta,)`) |
 
 The 1.21.1 Bendable Cuboids port is submitted to the corresponding upstream branch as [PR #40](https://github.com/PlayerAnimationLibrary/BendableCuboids/pull/40). The 26.1 family uses 2.0.2 because the loader metadata inside 2.0.4 requires 26.2. Historical split-loader artifacts are pinned by Modrinth version ID in their Gradle properties.
 
